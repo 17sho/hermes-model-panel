@@ -25,7 +25,10 @@ A small dark-theme web panel for an **already-installed** [Hermes Agent](https:/
 | Relays | Add OpenAI-compatible endpoints, fetch models, assign per agent |
 | Image models | Pick image generation models from the same relays |
 | Chat platforms | Per-agent Telegram / WeChat / Discord / … tokens (never echoed); turn a platform off |
-| Work status | Dedicated page: busy / idle / stopped; start/stop/restart Gateway |
+| Work status | Dedicated page: busy / idle / stopped (busy shows who + elapsed); start/stop/restart Gateway |
+| Context | Dedicated page: open sessions, resume, delete, per-chat model |
+| Agent tools | Dedicated page: per-agent basic toolsets (web/terminal/browser); not chat-platform toolsets |
+| Skills | Dedicated page: enable/disable installed skills; archive-delete a skill |
 | Settings | Change or toggle panel password; restart the matching Gateway |
 
 Agents are discovered when you open or refresh the page — not on a timer.

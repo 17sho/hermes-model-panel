@@ -63,8 +63,40 @@ body.ready .wrap{opacity:1;transform:none}
 .workFlag.idle{background:#1a2030;color:#8b93a7}
 .workFlag.down{background:rgba(255,107,122,.14);color:#ff6b7a}
 .workMeta{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.45}
+.workWho{margin-top:10px;font-size:15px;font-weight:700;color:var(--text);line-height:1.45}
 .workPlats{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.workCard .actions{margin-top:14px}
+.workSess{margin-top:12px;display:grid;gap:8px}
+.toolGrid{display:grid;grid-template-columns:1fr;gap:8px;padding:12px 16px 16px;min-width:0}
+.toolItem{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:10px;background:#12141c;min-width:0;overflow:hidden}
+.toolItem input{margin-top:3px;flex:0 0 auto}
+.toolItem>div{min-width:0;overflow:hidden}
+.toolItem b{display:block;font-size:14px;line-height:1.3;word-break:break-word}
+.toolItem span{display:block;color:var(--muted);font-size:12px;line-height:1.4;margin-top:4px;word-break:break-word;overflow-wrap:anywhere}
+.sessPageHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:4px}
+.sessPageHead .actions{margin:0}
+.sessList{display:grid;gap:10px}
+.sessAgent{border:1px solid var(--line);border-radius:14px;background:var(--card2);overflow:hidden}
+.sessAgent.open{border-color:#3a4460}
+.sessFoldHead{width:100%;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:transparent;border:0;padding:14px 16px;color:inherit;text-align:left;cursor:pointer;min-height:64px}
+.sessFoldHead:hover{background:#1a2030}
+.sessChevron{width:22px;height:22px;border-radius:6px;border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+.sessAgent.open .sessChevron{color:var(--accent);border-color:var(--accent)}
+.sessFoldMain{min-width:0}
+.sessFoldMain .workName{font-size:18px;line-height:1.2}
+.sessFoldHint{display:block;margin-top:4px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sessCount{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 8px;white-space:nowrap}
+.workSess{margin:0;padding:0 12px 12px;display:grid;gap:8px}
+.workSessItem{border:1px solid var(--line);border-radius:12px;padding:12px;background:#10131b}
+.workSessItem.cur{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.workSessTop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.workSessTop b{font-size:14px;line-height:1.35;min-width:0}
+.sessTag{flex:0 0 auto;border-radius:999px;padding:3px 8px;font-size:11px;color:var(--muted);border:1px solid var(--line)}
+.sessTag.cur{color:#0b1020;background:var(--accent);border-color:var(--accent);font-weight:700}
+.workSessMeta{color:var(--muted);font-size:12px;margin-top:6px;line-height:1.45}
+.workSessActs{display:grid;grid-template-columns:auto 1fr auto;gap:8px;margin-top:10px;align-items:center}
+.workSessActs select{min-width:0}
+.workSessActs .danger{min-height:34px}
+.sessMore{width:100%;min-height:40px;border-style:dashed}
 .topRight{display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-width:0;max-width:100%}
 .homeBtn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);text-decoration:none;font-weight:700}
 .grid{display:block}
@@ -106,7 +138,9 @@ button.ghost{background:transparent}
 .models{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:13px}
 .chip.active{border-color:var(--accent)}
-.toolGrid{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.platToolGrid{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.skillChipWrap{display:inline-flex;align-items:center;gap:4px}
+.skillDel{padding:6px 8px;font-size:12px;min-width:auto}
 .toolBtn{min-height:36px;padding:6px 10px;border-radius:999px;font-size:13px}
 .toolBtn.on{border-color:var(--accent);color:var(--accent);background:#1a2030}
 .toolBtn.off{opacity:.72}
@@ -267,6 +301,12 @@ button.ghost{background:transparent}
   .testbar textarea{min-height:96px}
   .testLogBody{max-height:180px;font-size:11px}
   .providerTools{grid-template-columns:1fr}
+  .sessFoldHead{grid-template-columns:auto 1fr;padding:12px}
+  .sessCount{grid-column:2;justify-self:start}
+  .workSessActs{grid-template-columns:1fr}
+  .platToolGrid{padding:10px 12px 0}
+  .skillChipWrap{display:inline-flex;align-items:center;gap:4px;margin:0 6px 8px 0}
+  .skillDel{padding:6px 8px;font-size:12px;min-width:auto}
   .providerPager{display:grid;grid-template-columns:1fr 1fr;align-items:stretch}
   .providerPager input{width:100%}
   .providerPager .wide{grid-column:1/-1}
@@ -288,7 +328,7 @@ button.ghost{background:transparent}
   <div id="login" class="login hidden"><div class="card"><h2>Hermes 模型面板</h2><p class="muted">请输入管理员密码</p><div class="form"><input id="password" type="password" placeholder="管理员密码" autocomplete="current-password"><button class="primary" onclick="login()">登录</button></div></div></div>
   <main id="app" class="wrap hidden">
     <div id="menuShade" class="menuShade" onclick="toggleSideMenu(false)"></div>
-    <aside id="sideMenu" class="sideMenu" aria-label="功能菜单"><div class="sideBrand"><b>模型台</b></div><nav class="sideNav"><button type="button" data-target="currentSection" onclick="goSection('currentSection',this)">📌 当前模型</button><button type="button" data-target="addSection" onclick="goSection('addSection',this)">➕ 添加中转站</button><button type="button" data-target="testSection" onclick="goSection('testSection',this)">🧪 中转站测试</button><button type="button" data-target="providersSection" onclick="goSection('providersSection',this)">🧩 中转站与模型</button><button type="button" data-target="imageGenSection" onclick="goSection('imageGenSection',this)">🎨 生图模型选择</button><button type="button" data-target="chatToolsSection" onclick="goSection('chatToolsSection',this)">💬 聊天平台</button><button type="button" data-target="workStatusSection" onclick="goSection('workStatusSection',this)">📡 工作状态</button><button type="button" data-target="commandsSection" onclick="goSection('commandsSection',this)">⚡ TG 快捷命令</button><button type="button" data-target="settingsSection" onclick="goSection('settingsSection',this)">⚙️ 设置</button></nav><div class="sideFoot">手机端选择功能后会自动隐藏菜单。</div></aside>
+    <aside id="sideMenu" class="sideMenu" aria-label="功能菜单"><div class="sideBrand"><b>模型台</b></div><nav class="sideNav"><button type="button" data-target="currentSection" onclick="goSection('currentSection',this)">📌 当前模型</button><button type="button" data-target="addSection" onclick="goSection('addSection',this)">➕ 添加中转站</button><button type="button" data-target="testSection" onclick="goSection('testSection',this)">🧪 中转站测试</button><button type="button" data-target="providersSection" onclick="goSection('providersSection',this)">🧩 中转站与模型</button><button type="button" data-target="imageGenSection" onclick="goSection('imageGenSection',this)">🎨 生图模型选择</button><button type="button" data-target="chatToolsSection" onclick="goSection('chatToolsSection',this)">💬 聊天平台</button><button type="button" data-target="workStatusSection" onclick="goSection('workStatusSection',this)">📡 工作状态</button><button type="button" data-target="sessionResumeSection" onclick="goSection('sessionResumeSection',this)">↩ 选上下文</button><button type="button" data-target="agentToolsSection" onclick="goSection('agentToolsSection',this)">🧰 Agent 工具</button><button type="button" data-target="agentSkillsSection" onclick="goSection('agentSkillsSection',this)">📚 Skills</button><button type="button" data-target="commandsSection" onclick="goSection('commandsSection',this)">⚡ TG 快捷命令</button><button type="button" data-target="settingsSection" onclick="goSection('settingsSection',this)">⚙️ 设置</button></nav><div class="sideFoot">手机端选择功能后会自动隐藏菜单。</div></aside>
     <div class="top"><button id="mobileMenuBtn" class="mobileMenuBtn" type="button" onclick="toggleSideMenu(true)">☰ 功能</button><div class="title"><h1>模型台</h1></div><div class="topRight"><div class="badge" id="serviceStatus" aria-label="agent 状态"></div></div></div>
     <div class="grid panelPages" style="margin-top:18px">
       <section id="currentSection" class="card panelSection activeSection"><h2>当前模型</h2><p class="pageHint">有几个 agent 列几个。切完要生效请 /reset 或到设置里重启。</p><div id="current" class="current"></div><div class="actions"><button class="primary" onclick="loadState()">刷新当前状态</button></div><div class="hr"></div><h2>新建 agent</h2><p class="muted">在这台已装 Hermes 的服务器上建一个新 profile，并装对应 Gateway。不会自动填 Key / 聊天 Token。克隆只拷模型配置，Token 不拷。</p><div class="row"><input id="newAgentName" placeholder="名字，例如 agent4" autocomplete="off"><select id="cloneFromAgent"><option value="">空白新建</option></select></div><div class="actions" style="margin-top:10px"><button type="button" class="primary" id="createAgentBtn" onclick="createAgent()">新建</button></div></section>
@@ -299,7 +339,10 @@ button.ghost{background:transparent}
 
     <section id="imageGenSection" class="card panelSection" style="margin-top:18px"><h2>生图模型选择</h2><p class="pageHint">按当前中转拉列表，点「获取」才请求。</p><div id="imageGenBox" class="providers"></div></section>
     <section id="chatToolsSection" class="card panelSection" style="margin-top:18px"><h2>聊天平台</h2><p class="pageHint">按 agent 看已接上的平台，也能给这个 agent 添加平台。密钥不回显。保存后要到设置里重启对应 Gateway 才进线。</p><div class="actions" style="margin-top:0"><button type="button" onclick="loadChatPlatforms()">刷新状态</button></div><div id="chatToolsBox" class="providers"></div></section>
-    <section id="workStatusSection" class="card panelSection" style="margin-top:18px"><h2>工作状态</h2><p class="pageHint">绿条 = 正在干活；灰条 = 空闲待命；红条 = Gateway 停了。右上角绿点只表示进程在跑，不代表有活。</p><div class="actions" style="margin-top:0"><button type="button" onclick="loadWorkStatus()">刷新</button></div><div id="workStatusBox" class="workList"></div></section>
+    <section id="workStatusSection" class="card panelSection" style="margin-top:18px"><h2>工作状态</h2><p class="pageHint">绿条 = 正在干活（会写在回谁、已干多久）；灰条 = 空闲待命；红条 = Gateway 停了。右上角绿点只表示进程在跑，不代表有活。</p><div class="actions" style="margin-top:0"><button type="button" onclick="loadWorkStatus()">刷新</button></div><div id="workStatusBox" class="workList"></div></section>
+    <section id="sessionResumeSection" class="card panelSection" style="margin-top:18px"><div class="sessPageHead"><div><h2 style="margin:0 0 6px">选上下文</h2><p class="pageHint">默认收起。点开某个 agent，切回一条或只给这一条指定模型。关机后历史还在，进行中的那一轮不会自动重跑。</p></div><div class="actions"><button type="button" onclick="loadSessionResume()">刷新</button></div></div><div id="sessionResumeBox" class="sessList"></div></section>
+    <section id="agentToolsSection" class="card panelSection" style="margin-top:18px"><div class="sessPageHead"><div><h2 style="margin:0 0 6px">Agent 工具</h2><p class="pageHint">按 agent 开关能力（网页、终端、浏览器、记忆等）。这不是聊天平台。保存后到设置里重启对应 Gateway 才生效。</p></div><div class="actions"><button type="button" onclick="loadAgentTools()">刷新</button></div></div><div id="agentToolsBox" class="sessList"></div></section>
+    <section id="agentSkillsSection" class="card panelSection" style="margin-top:18px"><div class="sessPageHead"><div><h2 style="margin:0 0 6px">Skills</h2><p class="pageHint">按 agent 开关已装 skill。默认全开。关掉的会写入这个 agent 的 config.yaml。保存后到设置里重启对应 Gateway 才生效。</p></div><div class="actions"><button type="button" onclick="loadAgentSkills()">刷新</button></div></div><div id="agentSkillsBox" class="sessList"></div></section>
     <section id="commandsSection" class="card panelSection" style="margin-top:18px"><div class="commandEntry"><div><h2 style="margin:0 0 6px">TG 快捷命令</h2><p class="muted" style="margin:0">已收入二级页面，点击后查看完整 Telegram 命令列表。</p></div><button class="primary" type="button" onclick="openCommandsPage()">查看 TG 快捷命令</button></div></section>
       <section id="settingsSection" class="card panelSection" style="margin-top:18px"><h2>设置</h2><p class="muted">低频维护操作集中放在这里，避免当前模型页被按钮挤满。</p><div class="usageBlock" style="border-top:0;padding-top:0"><div class="usageHead"><h2>API 使用量</h2><span id="usageSource" class="muted">点击按钮查看</span></div><div class="actions" style="margin-top:0"><button class="primary" type="button" onclick="toggleUsage()" id="usageToggleBtn">查看 API 使用量</button></div><div id="usage" class="usageGrid hidden"></div></div><div class="hr"></div><h2>面板密码</h2><p class="muted" id="authHint">读取中...</p><div class="form"><label class="k"><input id="authEnabled" type="checkbox"> 打开密码保护</label><input id="authOldPassword" type="password" autocomplete="current-password" placeholder="当前密码（关掉保护时不用填）"><input id="authNewPassword" type="password" autocomplete="new-password" placeholder="新密码，至少 8 位，不改就留空"><div class="actions"><button type="button" class="primary" id="saveAuthBtn" onclick="saveAuthSettings()">保存密码设置</button></div></div><p class="muted">公网直出务必打开密码。打开后立刻对本浏览器发登录态，别人再进要输密码。密码不回显。</p><div class="hr"></div><h2>Gateway 与快捷命令</h2><div class="actions"><button onclick="rebuildCommands()">重建 TG 快捷命令</button><button class="ghost" onclick="loadState()">刷新面板状态</button><select id="restartAgent" style="max-width:180px"></select><button class="danger" onclick="restartGateway()">重启 Gateway</button></div><p class="muted">重启会中断对应 agent 当前正在运行的任务；只在切换配置未生效或需要刷新 TG 命令时使用。</p></section>
   </main>
@@ -317,6 +360,9 @@ let PROVIDER_PAGE=1;
 const PROVIDER_PAGE_SIZE=2;
 let PROVIDER_SEARCH='';
 const EXPANDED_PROVIDERS=new Set();
+const SESSION_AGENT_OPEN=new Set();
+const SESSION_LIST_OPEN=new Set();
+let SESSION_STATUS_CACHE=[];
 const $=id=>document.getElementById(id);
 const API_BASE=(document.querySelector('base')?.getAttribute('href')||window.location.pathname).replace(/\/$/,'')+'/api';
 function toggleSideMenu(open){const m=$('sideMenu');const shade=$('menuShade');if(!m)return;const show=open===undefined?!m.classList.contains('open'):!!open;m.classList.toggle('open',show);if(shade)shade.classList.toggle('show',show)}
@@ -333,8 +379,8 @@ else if(MOBILE_MENU_MQ.addListener)MOBILE_MENU_MQ.addListener(syncMenuToViewport
 window.addEventListener('resize',syncMenuToViewport);
 function markSideActive(target){document.querySelectorAll('.sideNav button').forEach(b=>b.classList.toggle('active',b.dataset.target===target))}
 function showPanel(id){document.querySelectorAll('.panelSection').forEach(el=>el.classList.toggle('activeSection',el.id===id));markSideActive(id);try{history.replaceState(null,'','#'+id)}catch{} window.scrollTo({top:0,behavior:'smooth'})}
-function goSection(id,btn){const el=$(id);if(!el)return;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='settingsSection')loadAuthSettings();if(window.matchMedia('(max-width:900px)').matches)toggleSideMenu(false)}
-function initPanelPage(){const wanted=(location.hash||'').replace('#','');const first=document.querySelector('.panelSection')?.id||'currentSection';const id=$(wanted)?wanted:first;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='settingsSection')loadAuthSettings()}
+function goSection(id,btn){const el=$(id);if(!el)return;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='sessionResumeSection')loadSessionResume();if(id==='agentToolsSection')loadAgentTools();if(id==='agentSkillsSection')loadAgentSkills();if(id==='settingsSection')loadAuthSettings();if(window.matchMedia('(max-width:900px)').matches)toggleSideMenu(false)}
+function initPanelPage(){const wanted=(location.hash||'').replace('#','');const first=document.querySelector('.panelSection')?.id||'currentSection';const id=$(wanted)?wanted:first;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='sessionResumeSection')loadSessionResume();if(id==='agentToolsSection')loadAgentTools();if(id==='agentSkillsSection')loadAgentSkills();if(id==='settingsSection')loadAuthSettings()}
 requestAnimationFrame(()=>document.body.classList.add('ready'));
 function warmHome(){try{fetch('/',{credentials:'same-origin',cache:'reload'}).catch(()=>{})}catch{}}
 document.querySelectorAll('[data-home-link]').forEach(a=>{a.addEventListener('pointerenter',warmHome,{once:true});a.addEventListener('touchstart',warmHome,{once:true,passive:true});});
@@ -556,7 +602,7 @@ function renderChatPlatforms(data){
       const fields=(openPlat.fields||[]).map(f=>fieldInput(a.id,openPlat.id,f)).join('');
       form=`<div class="provider" style="margin-top:10px"><div class="phead"><div><div class="pname">${esc(openPlat.label)}</div><div class="pmeta">${openPlat.configured?'已配置，可改字段':'未配置，填必填项后添加'}</div></div><div class="actions"><button class="small" type="button" onclick="togglePlatForm('${escAttr(a.id)}','${escAttr(openPlat.id)}')">收起</button>${openPlat.configured?`<button class="small danger" type="button" onclick="disableChatPlatform('${escAttr(a.id)}','${escAttr(openPlat.id)}','${escAttr(openPlat.label)}')">关掉这个平台</button>`:''}<button class="small primary" type="button" onclick="saveChatPlatform('${escAttr(a.id)}','${escAttr(openPlat.id)}')">保存</button></div></div><div class="form" id="platForm_${escAttr(a.id)}_${escAttr(openPlat.id)}">${fields}</div></div>`;
     }
-    return `<div class="provider"><div class="phead"><div><div class="pname">${esc(a.profile||a.id)}</div><div class="pmeta">已接：${esc(on)} · 点平台展开添加/修改</div></div></div><div class="toolGrid">${chips}</div>${form}</div>`;
+    return `<div class="provider"><div class="phead"><div><div class="pname">${esc(a.profile||a.id)}</div><div class="pmeta">已接：${esc(on)} · 点平台展开添加/修改</div></div></div><div class="platToolGrid">${chips}</div>${form}</div>`;
   }).join('');
 }
 async function loadChatPlatforms(){
@@ -629,7 +675,13 @@ function renderWorkStatus(list){
       return `<span class="statusChip"><span class="dot ${on?'on':'off'}"></span><span class="name">${esc(name)}</span><span class="st">${esc(platStateLabel(info.state)+err)}</span></span>`;
     }).join(''):'<span class="muted">还没有平台状态</span>';
     const updated=x.updated_at?String(x.updated_at).replace('T',' ').replace(/\.\d+.*/,''):'';
-    return `<div class="workCard ${mode}"><div class="workHead"><div class="workName">${esc(x.profile||x.agent)}</div><span class="workFlag ${mode}">${esc(flag)}</span></div><div class="workMeta">Gateway ${esc(x.status||'unknown')}${x.gateway_state?' · '+esc(x.gateway_state):''}${updated?(' · '+esc(updated)):''}</div><div class="workPlats">${platHtml}</div><div class="actions"><button class="small" type="button" ${running?'disabled':''} onclick="controlGateway('${escAttr(x.agent)}','start')">启动</button><button class="small" type="button" ${running?'':'disabled'} onclick="controlGateway('${escAttr(x.agent)}','stop')">停止</button><button class="small" type="button" onclick="controlGateway('${escAttr(x.agent)}','restart')">重启</button></div></div>`;
+    const who=(x.busy_targets||[]).map(t=>{
+      const whoName=t.name?(' · '+t.name):'';
+      const age=t.elapsed_label?(' · 已 '+t.elapsed_label):'';
+      return esc((t.platform_label||t.platform||'平台')+whoName+age);
+    }).join('；');
+    const whoHtml=mode==='busy'?(who?`<div class="workWho">正在回：${who}</div>`:`<div class="workWho">正在干活，对方还不明确</div>`):'';
+    return `<div class="workCard ${mode}"><div class="workHead"><div class="workName">${esc(x.profile||x.agent)}</div><span class="workFlag ${mode}">${esc(flag)}</span></div><div class="workMeta">Gateway ${esc(x.status||'unknown')}${x.gateway_state?' · '+esc(x.gateway_state):''}${updated?(' · '+esc(updated)):''}</div>${whoHtml}<div class="workPlats">${platHtml}</div><div class="actions"><button class="small" type="button" ${running?'disabled':''} onclick="controlGateway('${escAttr(x.agent)}','start')">启动</button><button class="small" type="button" ${running?'':'disabled'} onclick="controlGateway('${escAttr(x.agent)}','stop')">停止</button><button class="small" type="button" onclick="controlGateway('${escAttr(x.agent)}','restart')">重启</button></div></div>`;
   }).join('');
 }
 async function loadWorkStatus(){
@@ -648,6 +700,199 @@ async function loadWorkStatus(){
       top.innerHTML=list.length?list.map(x=>chip(x.profile||x.agent,x.status)).join(''):chip('Gateway',s.status||'unknown');
     }
   }catch(e){if(box) box.innerHTML='<p class="err">'+esc(e.message)+'</p>'}
+}
+function renderSessionResume(list){
+  const box=$('sessionResumeBox'); if(!box)return;
+  const rows=list||[];
+  if(!rows.length){box.innerHTML='<p class="muted">没有扫到 agent</p>';return}
+  box.innerHTML=rows.map(x=>{
+    const key=String(x.agent||x.profile||'');
+    const open=SESSION_AGENT_OPEN.has(key);
+    const sess=x.sessions||[];
+    const expanded=SESSION_LIST_OPEN.has(key);
+    const shown=expanded?sess:sess.slice(0,2);
+    const more=sess.length>2;
+    const choices=x.model_choices||[];
+    const cur=sess.find(s=>s.current);
+    const hint=cur?(cur.title||[cur.platform_label||cur.platform,cur.name].filter(Boolean).join(' · ')||'当前一条'):(sess.length?('共 '+sess.length+' 条'):'暂无会话');
+    const sessHtml=!open?'':(sess.length?`<div class="workSess">${shown.map(s=>{
+      const who=[s.platform_label||s.platform,s.name].filter(Boolean).join(' · ');
+      const tag=s.current?'当前':(s.open?'未结束':'已结束');
+      const modelOpts=['<option value="">这条下一条用…</option>'].concat(choices.map(m=>`<option value="${escAttr(m)}">${esc(m)}</option>`)).join('');
+      return `<div class="workSessItem ${s.current?'cur':''}"><div class="workSessTop"><b>${esc(s.title||who||s.id)}</b><span class="sessTag ${s.current?'cur':''}">${esc(tag)}</span></div><div class="workSessMeta">${esc(who)}${s.when?(' · '+esc(s.when)):''}${s.model?(' · '+esc(s.model)):''}${s.message_count?(' · '+s.message_count+' 条'):''}</div><div class="workSessActs"><button class="small" type="button" ${s.current?'disabled':''} onclick="resumeSession('${escAttr(x.agent)}','${escAttr(s.id)}')">切回这条</button><select onchange="if(this.value)setSessionModel('${escAttr(x.agent)}','${escAttr(s.session_key)}',this.value)">${modelOpts}</select><button class="small danger" type="button" onclick="deleteSession('${escAttr(x.agent)}','${escAttr(s.id)}')">删除</button></div></div>`;
+    }).join('')}${more?`<button type="button" class="small sessMore" onclick="toggleSessionList('${escAttr(key)}')">${expanded?('收起会话'):('展开其余 '+(sess.length-2)+' 条')}</button>`:''}</div>`:'<div class="muted" style="padding:0 16px 14px">还没有可切回的聊天会话</div>');
+    return `<div class="sessAgent ${open?'open':''}"><button type="button" class="sessFoldHead" onclick="toggleSessionAgent('${escAttr(key)}')"><span class="sessChevron">${open?'▾':'▸'}</span><span class="sessFoldMain"><div class="workName">${esc(x.profile||x.agent)}</div><span class="sessFoldHint">${esc(hint)}</span></span><span class="sessCount">${sess.length} 条</span></button>${sessHtml}</div>`;
+  }).join('');
+}
+function toggleSessionAgent(key){if(SESSION_AGENT_OPEN.has(key)) SESSION_AGENT_OPEN.delete(key); else SESSION_AGENT_OPEN.add(key); renderSessionResume(SESSION_STATUS_CACHE)}
+function toggleSessionList(key){if(SESSION_LIST_OPEN.has(key)) SESSION_LIST_OPEN.delete(key); else SESSION_LIST_OPEN.add(key); renderSessionResume(SESSION_STATUS_CACHE)}
+async function loadSessionResume(){
+  const box=$('sessionResumeBox');
+  if(box && !box.dataset.loaded) box.innerHTML='<p class="muted">读取中...</p>';
+  try{
+    const s=await api('/service-status');
+    if(box) box.dataset.loaded='1';
+    SESSION_STATUS_CACHE=s.statuses||[];
+    renderSessionResume(SESSION_STATUS_CACHE);
+  }catch(e){if(box) box.innerHTML='<p class="err">'+esc(e.message)+'</p>'}
+}
+let TOOLS_CACHE=null;
+const TOOLS_AGENT_OPEN=new Set();
+function toolLabel(id){
+  return ({web:'网页搜索',search:'仅搜索',vision:'看图',file:'读改文件',terminal:'终端',browser:'浏览器',skills:'技能',memory:'记忆',todo:'待办',clarify:'追问用户',delegation:'委派子代理',code_execution:'跑代码',cronjob:'定时任务',session_search:'搜历史会话',tts:'语音',image_gen:'生图',video:'看视频',video_gen:'生视频',computer_use:'操控桌面',x_search:'搜 X',safe:'安全组合',debugging:'调试组合',coding:'写代码组合'})[id]||id;
+}
+function renderAgentTools(data){
+  const box=$('agentToolsBox'); if(!box)return;
+  const catalog=data.catalog||[];
+  const agents=data.agents||[];
+  if(!agents.length){box.innerHTML='<p class="muted">没有 agent</p>';return}
+  box.innerHTML=agents.map(a=>{
+    const key=a.agent;
+    const open=TOOLS_AGENT_OPEN.has(key);
+    const on=new Set(a.enabled||[]);
+    const n=catalog.filter(t=>on.has(t.id)).length;
+    const hint=n?('已开 '+n+' 项'):'当前没单独开基础工具（走 Hermes 默认）';
+    const chips=catalog.map(t=>{
+      const onNow=on.has(t.id);
+      return `<button type="button" class="toolBtn ${onNow?'on':'off'}" data-agent="${esc(a.agent)}" data-id="${esc(t.id)}" onclick="toggleToolChip(this)">${esc(toolLabel(t.id))}${onNow?' · 开':' · 关'}</button>`;
+    }).join('');
+    const body=!open?'':`<div class="platToolGrid" style="padding:12px 16px 0">${chips}</div><div class="actions" style="padding:12px 16px 16px"><button type="button" class="primary" onclick="saveAgentTools('${esc(a.agent)}')">保存这个 agent</button></div>`;
+    return `<div class="sessAgent ${open?'open':''}"><button type="button" class="sessFoldHead" onclick="toggleToolsAgent('${esc(key)}')"><span class="sessChevron">${open?'▾':'▸'}</span><span class="sessFoldMain"><span class="workName">${esc(a.name)}</span><span class="sessFoldHint">${esc(hint)}</span></span><span class="sessCount">${n}</span></button>${body}</div>`;
+  }).join('');
+}
+function toggleToolsAgent(key){if(TOOLS_AGENT_OPEN.has(key)) TOOLS_AGENT_OPEN.delete(key); else TOOLS_AGENT_OPEN.add(key); if(TOOLS_CACHE) renderAgentTools(TOOLS_CACHE)}
+function toggleToolChip(btn){
+  const on=btn.classList.contains('on');
+  btn.classList.toggle('on',!on);
+  btn.classList.toggle('off',on);
+  const name=btn.textContent.replace(/\s*·\s*(开|关)\s*$/,'');
+  btn.textContent=name+(on?' · 关':' · 开');
+}
+async function loadAgentTools(){
+  const box=$('agentToolsBox');
+  if(box && !box.dataset.loaded) box.innerHTML='<p class="muted">读取中...</p>';
+  try{
+    const s=await api('/toolsets');
+    if(box) box.dataset.loaded='1';
+    TOOLS_CACHE=s;
+    renderAgentTools(s);
+  }catch(e){if(box) box.innerHTML='<p class="err">'+esc(e.message)+'</p>'}
+}
+async function saveAgentTools(agent){
+  const box=$('agentToolsBox');
+  const enabled=[...box.querySelectorAll('button.toolBtn.on[data-agent="'+agent+'"]')].map(el=>el.dataset.id);
+  if(!confirm('保存 '+agent+' 的工具开关？Gateway 在跑请到设置里重启后才生效。'))return;
+  try{
+    const r=await api('/toolsets',{method:'POST',body:JSON.stringify({agent,enabled})});
+    toast(r.hint||'已保存');
+    await loadAgentTools();
+  }catch(e){toast(e.message)}
+}
+let SKILLS_CACHE=null;
+const SKILLS_AGENT_OPEN=new Set();
+const SKILLS_CAT_OPEN=new Set();
+const SKILLS_OFF={};
+const CAT_LABEL={
+  'autonomous-ai-agents':'自主代理','communications':'通讯','creative':'创作','data-science':'数据',
+  'devops':'运维','github':'GitHub','mlops':'机器学习','productivity':'效率','red-teaming':'红队',
+  'research':'研究','smart-home':'智能家居','software-development':'开发','uncategorized':'其它'
+};
+function catLabel(id){return CAT_LABEL[id]||id}
+function skillsOff(agent){
+  if(!SKILLS_OFF[agent]) SKILLS_OFF[agent]=new Set();
+  return SKILLS_OFF[agent];
+}
+function renderAgentSkills(data){
+  const box=$('agentSkillsBox'); if(!box)return;
+  const agents=data.agents||[];
+  if(!agents.length){box.innerHTML='<p class="muted">没有 agent</p>';return}
+  box.innerHTML=agents.map(a=>{
+    const key=a.agent;
+    const open=SKILLS_AGENT_OPEN.has(key);
+    const off=skillsOff(key);
+    const catalog=a.catalog||[];
+    const nOff=catalog.filter(t=>off.has(t.id)).length;
+    const hint=catalog.length?(nOff?('已关 '+nOff+' / '+catalog.length):('已装 '+catalog.length+'，当前全开')):'这个 agent 目录里没有 skill';
+    let body='';
+    if(open){
+      const groups={};
+      catalog.forEach(t=>{(groups[t.category||'uncategorized']||(groups[t.category||'uncategorized']=[])).push(t)});
+      const cats=Object.keys(groups).sort();
+      body=cats.map(cat=>{
+        const ck=key+'::'+cat;
+        const cOpen=SKILLS_CAT_OPEN.has(ck);
+        const items=groups[cat];
+        const offN=items.filter(t=>off.has(t.id)).length;
+        const chips=items.map(t=>{
+          const onNow=!off.has(t.id);
+          return `<span class="skillChipWrap"><button type="button" class="toolBtn ${onNow?'on':'off'}" onclick="toggleSkillChip('${esc(key)}','${esc(t.id)}')">${esc(t.id)}${onNow?' · 开':' · 关'}</button><button type="button" class="danger skillDel" onclick="deleteAgentSkill('${esc(key)}','${esc(t.id)}')">删</button></span>`;
+        }).join('');
+        return `<div class="sessAgent ${cOpen?'open':''}" style="border:0;border-top:1px solid var(--line);border-radius:0"><button type="button" class="sessFoldHead" onclick="toggleSkillsCat('${esc(ck)}')"><span class="sessChevron">${cOpen?'▾':'▸'}</span><span class="sessFoldMain"><span class="workName">${esc(catLabel(cat))}</span><span class="sessFoldHint">${offN?('关 '+offN+' / '+items.length):items.length+' 个'}</span></span><span class="sessCount">${items.length}</span></button>${cOpen?`<div class="platToolGrid" style="padding:12px 16px 12px">${chips}</div>`:''}</div>`;
+      }).join('');
+      body=`<div>${body}</div><div class="actions" style="padding:12px 16px 16px"><button type="button" class="primary" onclick="saveAgentSkills('${esc(a.agent)}')">保存这个 agent</button></div>`;
+    }
+    return `<div class="sessAgent ${open?'open':''}"><button type="button" class="sessFoldHead" onclick="toggleSkillsAgent('${esc(key)}')"><span class="sessChevron">${open?'▾':'▸'}</span><span class="sessFoldMain"><span class="workName">${esc(a.name)}</span><span class="sessFoldHint">${esc(hint)}</span></span><span class="sessCount">${catalog.length-nOff}</span></button>${body}</div>`;
+  }).join('');
+}
+function toggleSkillsAgent(key){if(SKILLS_AGENT_OPEN.has(key)) SKILLS_AGENT_OPEN.delete(key); else SKILLS_AGENT_OPEN.add(key); if(SKILLS_CACHE) renderAgentSkills(SKILLS_CACHE)}
+function toggleSkillsCat(key){if(SKILLS_CAT_OPEN.has(key)) SKILLS_CAT_OPEN.delete(key); else SKILLS_CAT_OPEN.add(key); if(SKILLS_CACHE) renderAgentSkills(SKILLS_CACHE)}
+function toggleSkillChip(agent,id){
+  const off=skillsOff(agent);
+  if(off.has(id)) off.delete(id); else off.add(id);
+  if(SKILLS_CACHE) renderAgentSkills(SKILLS_CACHE);
+}
+async function loadAgentSkills(){
+  const box=$('agentSkillsBox');
+  if(box && !box.dataset.loaded) box.innerHTML='<p class="muted">读取中...</p>';
+  try{
+    const s=await api('/skills');
+    if(box) box.dataset.loaded='1';
+    SKILLS_CACHE=s;
+    (s.agents||[]).forEach(a=>{SKILLS_OFF[a.agent]=new Set(a.disabled||[])});
+    renderAgentSkills(s);
+  }catch(e){if(box) box.innerHTML='<p class="err">'+esc(e.message)+'</p>'}
+}
+async function saveAgentSkills(agent){
+  const disabled=[...skillsOff(agent)];
+  if(!confirm('保存 '+agent+' 的 skill 开关？关掉的不会再进提示。Gateway 在跑请到设置里重启后才生效。'))return;
+  try{
+    const r=await api('/skills',{method:'POST',body:JSON.stringify({agent,disabled})});
+    toast(r.hint||'已保存');
+    await loadAgentSkills();
+  }catch(e){toast(e.message)}
+}
+async function deleteAgentSkill(agent,name){
+  if(!confirm('删除 skill「'+name+'」？会移到这个 agent 的 skills/.archive，聊天里不再加载。Gateway 在跑请到设置里重启。'))return;
+  try{
+    const r=await api('/skills/delete',{method:'POST',body:JSON.stringify({agent,name})});
+    toast(r.hint||'已删除');
+    await loadAgentSkills();
+  }catch(e){toast(e.message)}
+}
+async function resumeSession(agent,sessionId){
+  if(!confirm('切回这条上下文？当前这条聊天的进行中任务会断。Gateway 在跑的话请到工作状态里点重启。'))return;
+  try{
+    const r=await api('/sessions/resume',{method:'POST',body:JSON.stringify({agent,session_id:sessionId})});
+    toast(r.hint||'已切回');
+    await loadSessionResume();
+  }catch(e){toast(e.message)}
+}
+async function deleteSession(agent,sessionId){
+  if(!confirm('删除这条上下文？聊天记录会从库里清掉，不能恢复。Gateway 在跑请随后到工作状态里重启。'))return;
+  try{
+    const r=await api('/sessions/delete',{method:'POST',body:JSON.stringify({agent,session_id:sessionId})});
+    toast(r.hint||'已删除');
+    await loadSessionResume();
+  }catch(e){toast(e.message)}
+}
+async function setSessionModel(agent,sessionKey,model){
+  if(!sessionKey){toast('这条没有绑定聊天对象');return}
+  if(!confirm('这条聊天下一条改用 '+model+'？只改这一条，不改整个 agent。Gateway 在跑请到工作状态里重启。'))return;
+  try{
+    const r=await api('/sessions/model',{method:'POST',body:JSON.stringify({agent,session_key:sessionKey,model})});
+    toast(r.hint||'已指定模型');
+    await loadSessionResume();
+  }catch(e){toast(e.message)}
 }
 async function controlGateway(agent,action){
   const words={start:'启动',stop:'停止',restart:'重启'};

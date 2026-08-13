@@ -1512,6 +1512,180 @@ function agentHomeDir(agent) {
   return path.join(PROFILES_DIR, agent.profile);
 }
 
+function agentStateDb(agent) {
+  return path.join(agentHomeDir(agent), 'state.db');
+}
+
+const PLATFORM_LABELS = {
+  telegram: 'Telegram',
+  weixin: '微信',
+  wechat: '微信',
+  discord: 'Discord',
+  slack: 'Slack',
+  whatsapp: 'WhatsApp',
+  signal: 'Signal',
+  email: '邮件',
+};
+
+function platformLabel(id) {
+  const key = String(id || '').toLowerCase();
+  return PLATFORM_LABELS[key] || (key ? key : '未知平台');
+}
+
+function looksLikeId(name) {
+  const s = String(name || '').trim();
+  if (!s) return true;
+  if (/@im\.wechat$/i.test(s)) return true;
+  if (/^[0-9-]{6,}$/.test(s)) return true;
+  if (/^[a-z0-9_-]{20,}$/i.test(s)) return true;
+  return false;
+}
+
+function parseSessionPlatform(source, sessionKey) {
+  const src = String(source || '').trim().toLowerCase();
+  if (src && !['cli', 'tui', 'subagent', 'cron', 'web'].includes(src)) return src;
+  const key = String(sessionKey || '');
+  const m = key.match(/^agent:[^:]+:([a-z0-9_]+):/i);
+  return m ? m[1].toLowerCase() : src;
+}
+
+function formatWorkAge(seconds) {
+  const n = Number(seconds);
+  if (!Number.isFinite(n) || n < 0) return '';
+  if (n < 60) return Math.max(1, Math.round(n)) + ' 秒';
+  if (n < 3600) return Math.round(n / 60) + ' 分钟';
+  const h = Math.floor(n / 3600);
+  const m = Math.round((n % 3600) / 60);
+  return m ? (h + ' 小时 ' + m + ' 分钟') : (h + ' 小时');
+}
+
+function workAgeSeconds(row) {
+  const now = Date.now() / 1000;
+  const start = Number(row.last_user_ts || row.started_at || 0);
+  if (!start) return 0;
+  return Math.max(0, now - start);
+}
+
+function runPyScript(name, args, timeout = 4000) {
+  const script = path.join(process.cwd(), 'scripts', name);
+  const out = execFileSync('python3', [script, ...args], {
+    timeout,
+    encoding: 'utf8',
+    maxBuffer: 400000,
+  });
+  return out && String(out).trim() ? JSON.parse(out) : {};
+}
+
+function readBusyTargets(agent, activeCount) {
+  const jobs = Number(activeCount) || 0;
+  if (jobs <= 0) return [];
+  const dbPath = agentStateDb(agent);
+  if (!fssync.existsSync(dbPath)) return [];
+  try {
+    const limit = Math.min(Math.max(jobs, 1), 3);
+    const rows = runPyScript('busy-targets.py', [dbPath, String(limit)], 2500) || [];
+    const seen = new Set();
+    const list = [];
+    for (const row of rows) {
+      let origin = {};
+      try { origin = row.origin_json ? JSON.parse(row.origin_json) : {}; } catch { origin = {}; }
+      const platform = parseSessionPlatform(row.source || origin.platform, row.session_key);
+      if (!platform || ['cli', 'tui', 'subagent', 'cron', 'web'].includes(platform)) continue;
+      let name = String(row.display_name || origin.chat_name || origin.user_name || '').trim();
+      if (looksLikeId(name)) name = '';
+      const key = `${platform}|${name || row.session_key || origin.chat_id || row.title || ''}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      list.push({
+        platform,
+        platform_label: platformLabel(platform),
+        name,
+        chat_type: String(row.chat_type || origin.chat_type || ''),
+        started_at: Number(row.started_at) || 0,
+        last_user_ts: Number(row.last_user_ts) || 0,
+        elapsed_seconds: workAgeSeconds(row),
+        elapsed_label: formatWorkAge(workAgeSeconds(row)),
+      });
+    }
+    return list;
+  } catch {
+    return [];
+  }
+}
+
+function formatWhen(ts) {
+  const n = Number(ts);
+  if (!n) return '';
+  const d = new Date(n * 1000);
+  if (Number.isNaN(d.getTime())) return '';
+  const p = (x) => String(x).padStart(2, '0');
+  return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function readAgentSessions(agent, limit = 8) {
+  const dbPath = agentStateDb(agent);
+  if (!fssync.existsSync(dbPath)) return [];
+  try {
+    const rows = runPyScript('list-sessions.py', [dbPath, String(limit)]) || [];
+    const list = [];
+    for (const row of rows) {
+      let origin = {};
+      try { origin = row.origin_json ? JSON.parse(row.origin_json) : {}; } catch { origin = {}; }
+      const platform = parseSessionPlatform(row.source || origin.platform, row.session_key);
+      if (!platform || ['cli', 'tui', 'subagent', 'cron', 'web'].includes(platform)) continue;
+      let name = String(row.display_name || origin.chat_name || origin.user_name || '').trim();
+      if (looksLikeId(name)) name = '';
+      list.push({
+        id: row.id,
+        session_key: row.session_key || '',
+        platform,
+        platform_label: platformLabel(platform),
+        name,
+        title: String(row.title || '').trim(),
+        model: String(row.model || '').trim(),
+        message_count: Number(row.message_count) || 0,
+        open: !!row.open,
+        when: formatWhen(row.last_ts || row.started_at),
+        current: false,
+      });
+    }
+    let routing = {};
+    try {
+      const raw = JSON.parse(fssync.readFileSync(path.join(agentHomeDir(agent), 'sessions', 'sessions.json'), 'utf8'));
+      routing = raw && typeof raw === 'object' ? raw : {};
+    } catch { routing = {}; }
+    const currentIds = new Set();
+    for (const v of Object.values(routing)) {
+      if (v && v.session_id) currentIds.add(String(v.session_id));
+    }
+    for (const item of list) item.current = currentIds.has(String(item.id));
+    return list;
+  } catch {
+    return [];
+  }
+}
+
+function agentModelChoicesSync(agent) {
+  try {
+    const raw = fssync.readFileSync(agent.config, 'utf8');
+    const models = [];
+    const seen = new Set();
+    const add = (m) => {
+      const s = String(m || '').trim();
+      if (!s || seen.has(s)) return;
+      seen.add(s);
+      models.push(s);
+    };
+    const def = raw.match(/^\s*default:\s*["']?([^"'\n#]+)/m);
+    if (def) add(def[1]);
+    const block = raw.split(/custom_providers:/)[1] || '';
+    for (const m of block.matchAll(/^\s+-\s+["']?([^"'\n#]+)/gm)) add(m[1]);
+    return models.slice(0, 40);
+  } catch {
+    return [];
+  }
+}
+
 function readGatewayState(agent) {
   const file = path.join(agentHomeDir(agent), 'gateway_state.json');
   try {
@@ -1685,14 +1859,200 @@ router.get('/service-status', async (ctx) => {
     try {
       const { stdout } = await execFileAsync('systemctl', ['is-active', agent.service], { timeout: 4000 });
       const gw = readGatewayState(agent);
-      return { agent: agent.id, profile: agent.profile, name: agent.name, service: agent.service, status: stdout.trim(), ok: stdout.trim() === 'active', ...gw };
+      return { agent: agent.id, profile: agent.profile, name: agent.name, service: agent.service, status: stdout.trim(), ok: stdout.trim() === 'active', ...gw, busy_targets: readBusyTargets(agent, gw.active_agents), sessions: readAgentSessions(agent, 8), model_choices: agentModelChoicesSync(agent) };
     } catch (e) {
       const st = String((e.stdout || '')).trim() || 'inactive';
       const gw = readGatewayState(agent);
-      return { agent: agent.id, profile: agent.profile, name: agent.name, service: agent.service, status: st, ok: false, ...gw };
+      return { agent: agent.id, profile: agent.profile, name: agent.name, service: agent.service, status: st, ok: false, ...gw, busy_targets: [], sessions: readAgentSessions(agent, 8), model_choices: agentModelChoicesSync(agent) };
     }
   }));
   ctx.body = { ok: statuses.every((s) => s.ok), statuses, status: statuses.map((s) => `${s.profile || s.agent}:${s.status}`).join(' ') };
+});
+
+function catalogToolsets() {
+  try {
+    return runPyScript('list-toolsets.py', [], 8000) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+router.get('/toolsets', async (ctx) => {
+  try {
+    const catalog = catalogToolsets();
+    const ids = new Set(catalog.map((x) => x.id));
+    const agents = [];
+    for (const agent of AGENTS()) {
+      const { cfg } = await loadConfigDoc(agent.config);
+      const enabled = Array.isArray(cfg?.toolsets) ? cfg.toolsets.filter((x) => typeof x === 'string') : [];
+      const disabled = Array.isArray(cfg?.agent?.disabled_toolsets) ? cfg.agent.disabled_toolsets.filter((x) => typeof x === 'string') : [];
+      agents.push({
+        agent: agent.id,
+        name: agent.name,
+        profile: agent.profile,
+        enabled,
+        disabled,
+        unknown: enabled.filter((x) => !ids.has(x) && !String(x).startsWith('hermes-')),
+      });
+    }
+    ctx.body = { ok: true, catalog, agents };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message };
+  }
+});
+
+router.post('/toolsets', async (ctx) => {
+  try {
+    const agent = getAgent(String(ctx.request.body?.agent || 'default').trim());
+    const catalog = catalogToolsets();
+    const allowed = new Set(catalog.map((x) => x.id));
+    const incoming = Array.isArray(ctx.request.body?.enabled) ? ctx.request.body.enabled : null;
+    if (!incoming) throw new Error('没有勾选列表');
+    const enabled = [];
+    for (const raw of incoming) {
+      const id = String(raw || '').trim();
+      if (!id || !allowed.has(id)) continue;
+      if (!enabled.includes(id)) enabled.push(id);
+    }
+    const { cfg } = await loadConfigDoc(agent.config);
+    cfg.toolsets = enabled;
+    cfg.agent = cfg.agent && typeof cfg.agent === 'object' ? cfg.agent : {};
+    const disabled = Array.isArray(cfg.agent.disabled_toolsets) ? cfg.agent.disabled_toolsets.filter((x) => typeof x === 'string' && !enabled.includes(x)) : [];
+    cfg.agent.disabled_toolsets = disabled;
+    const backup = await saveConfig(cfg, agent.config);
+    ctx.body = { ok: true, enabled, backup, hint: '已写入该 agent 的 config.yaml。Gateway 在跑请到设置里重启后才生效。' };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message };
+  }
+});
+
+function catalogSkills(home) {
+  try {
+    return runPyScript('list-skills.py', [home], 8000) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+router.get('/skills', async (ctx) => {
+  try {
+    const agents = [];
+    for (const agent of AGENTS()) {
+      const { cfg } = await loadConfigDoc(agent.config);
+      const catalog = catalogSkills(agentHomeDir(agent));
+      const disabled = Array.isArray(cfg?.skills?.disabled) ? cfg.skills.disabled.filter((x) => typeof x === 'string') : [];
+      agents.push({
+        agent: agent.id,
+        name: agent.name,
+        profile: agent.profile,
+        catalog,
+        disabled,
+      });
+    }
+    ctx.body = { ok: true, agents };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message };
+  }
+});
+
+router.post('/skills', async (ctx) => {
+  try {
+    const agent = getAgent(String(ctx.request.body?.agent || 'default').trim());
+    const catalog = catalogSkills(agentHomeDir(agent));
+    const allowed = new Set(catalog.map((x) => x.id));
+    const incoming = Array.isArray(ctx.request.body?.disabled) ? ctx.request.body.disabled : null;
+    if (!incoming) throw new Error('没有开关列表');
+    const disabled = [];
+    for (const raw of incoming) {
+      const id = String(raw || '').trim();
+      if (!id || !allowed.has(id)) continue;
+      if (!disabled.includes(id)) disabled.push(id);
+    }
+    const { cfg } = await loadConfigDoc(agent.config);
+    cfg.skills = cfg.skills && typeof cfg.skills === 'object' ? cfg.skills : {};
+    cfg.skills.disabled = disabled;
+    const backup = await saveConfig(cfg, agent.config);
+    ctx.body = { ok: true, disabled, backup, hint: '已写入该 agent 的 skills.disabled。Gateway 在跑请到设置里重启后才生效。' };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message };
+  }
+});
+
+router.post('/skills/delete', async (ctx) => {
+  try {
+    const agent = getAgent(String(ctx.request.body?.agent || 'default').trim());
+    const name = String(ctx.request.body?.name || '').trim();
+    if (!name) throw new Error('没有 skill 名字');
+    const result = runPyScript('delete-skill.py', [agentHomeDir(agent), name], 8000);
+    if (!result || result.ok === false) throw new Error(result?.error || '删除失败');
+    const { cfg } = await loadConfigDoc(agent.config);
+    if (Array.isArray(cfg?.skills?.disabled)) {
+      cfg.skills.disabled = cfg.skills.disabled.filter((x) => x !== name);
+      await saveConfig(cfg, agent.config);
+    }
+    ctx.body = { ok: true, name, archived: result.archived, hint: '已移到这个 agent 的 skills/.archive。Gateway 在跑请到设置里重启后才生效。' };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message };
+  }
+});
+
+router.post('/sessions/resume', async (ctx) => {
+  try {
+    const agent = getAgent(String(ctx.request.body?.agent || 'default').trim());
+    const sessionId = String(ctx.request.body?.session_id || '').trim();
+    if (!/^[A-Za-z0-9_-]{6,64}$/.test(sessionId)) throw new Error('会话编号不对');
+    const dbPath = agentStateDb(agent);
+    if (!fssync.existsSync(dbPath)) throw new Error('没有会话库');
+    const out = runPyScript('resume-session.py', [dbPath, sessionId], 5000);
+    if (!out.ok) throw new Error(out.error || '切回失败');
+    ctx.body = { ok: true, ...out, hint: 'Gateway 在跑的话，重启后下一条消息才会切到这条上下文' };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message };
+  }
+});
+
+router.post('/sessions/delete', async (ctx) => {
+  try {
+    const agent = getAgent(String(ctx.request.body?.agent || 'default').trim());
+    const sessionId = String(ctx.request.body?.session_id || '').trim();
+    if (!/^[A-Za-z0-9_-]{6,64}$/.test(sessionId)) throw new Error('会话编号不对');
+    const dbPath = agentStateDb(agent);
+    if (!fssync.existsSync(dbPath)) throw new Error('没有会话库');
+    const out = runPyScript('delete-session.py', [dbPath, sessionId], 5000);
+    if (!out.ok) throw new Error(out.error || '删除失败');
+    ctx.body = { ok: true, ...out, hint: '这条上下文已删。Gateway 在跑请到工作状态里重启后再发下一条。' };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message };
+  }
+});
+
+router.post('/sessions/model', async (ctx) => {
+  try {
+    const agent = getAgent(String(ctx.request.body?.agent || 'default').trim());
+    const sessionKey = String(ctx.request.body?.session_key || '').trim();
+    const model = String(ctx.request.body?.model || '').trim();
+    if (!sessionKey.startsWith('agent:')) throw new Error('这条没有绑定聊天对象');
+    if (!model || model.length > 120) throw new Error('模型名不对');
+    const dbPath = agentStateDb(agent);
+    if (!fssync.existsSync(dbPath)) throw new Error('没有会话库');
+    const { cfg } = await loadConfigDoc(agent.config);
+    const current = getCurrent(cfg);
+    const slug = String(current.provider_slug || current.provider || '').trim();
+    const base = String(current.base_url || '').trim();
+    const out = runPyScript('set-session-model.py', [dbPath, sessionKey, model, slug, base], 5000);
+    if (!out.ok) throw new Error(out.error || '切模型失败');
+    ctx.body = { ok: true, ...out, hint: '只对这条聊天生效。Gateway 在跑请重启后再发下一条。' };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message };
+  }
 });
 
 router.post('/gateway-control', async (ctx) => {
