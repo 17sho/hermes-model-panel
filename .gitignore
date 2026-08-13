@@ -1,0 +1,8 @@
+node_modules/
+*.bak*
+.env
+*.env
+!samples/*.env.example
+hermes-model-panel.env
+model-panel-meta.json
+.DS_Store

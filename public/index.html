@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>模型台 · Hermes</title>
+  <style>
+:root{
+  color-scheme:dark;
+  --bg:#0e1016; --panel:#141821; --card:#181c27; --card2:#12161f;
+  --line:#2a3142; --text:#eef1f8; --muted:#8b93a7;
+  --accent:#6f8cff; --green:#3ecf8e; --red:#ff6b7a; --yellow:#e8c36a;
+  --z-menu:20; --z-shade:19; --z-toast:40; --z-modal:50; --z-mobile:25;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:"Noto Serif SC","Songti SC",ui-serif,Georgia,serif;
+  background:var(--bg); color:var(--text);
+}
+body,button,input,select,textarea{font-feature-settings:"tnum" 1}
+.mono,code,.agentModel,.agentLine .value,.pmeta,.v,.num,.cmd code,.testLogBody{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+button,input,select,textarea{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+h1,h2,.title h1,.sideBrand b,.pname,.agentName{font-family:"Noto Serif SC","Songti SC",ui-serif,Georgia,serif;text-wrap:balance}
+p,.muted{text-wrap:pretty}
+body.ready .wrap{opacity:1;transform:none}
+.wrap.entering{animation:appEnter .18s ease both}
+@keyframes appEnter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+.wrap{min-height:100vh;padding:0 22px 48px 248px}
+.top{
+  position:sticky; top:0; z-index:10;
+  display:flex; justify-content:space-between; gap:16px; align-items:flex-end;
+  margin:0 -22px 22px; padding:18px 22px 16px;
+  background:var(--bg); border-bottom:1px solid var(--line);
+}
+.title .eyebrow{display:none}
+.title h1{margin:0;font-size:30px;font-weight:650;letter-spacing:-.02em}
+.title p{margin:6px 0 0;color:var(--muted);font-size:14px}
+.badge{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;max-width:100%}
+.statusChip{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card2);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;line-height:1.2}
+.statusChip .name{font-weight:700}
+.statusChip .st{color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+.dot.on{background:var(--green)}
+.dot.off{background:var(--red)}
+.topRight{display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-width:0;max-width:100%}
+.homeBtn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);text-decoration:none;font-weight:700}
+.grid{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+.card h2{margin:0 0 14px;font-size:22px;font-weight:650}
+.current{display:grid;gap:8px}
+.agentCard{padding:12px 12px 10px;border:1px solid var(--line);border-radius:12px;background:var(--card2);display:grid;grid-template-columns:1fr auto;gap:6px 10px;min-width:0;align-items:start}
+.agentTop{display:flex;justify-content:flex-start;gap:8px;align-items:center;min-width:0}
+.agentName{font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:7px;min-width:0}
+.agentProfile{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.agentModel{grid-column:1/-1;font-size:15px;font-weight:700;word-break:break-word;line-height:1.3}
+.agentMeta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 12px;min-width:0}
+.agentLine{display:flex;gap:6px;align-items:baseline;min-width:0}
+.agentLine .label{font-size:12px;color:var(--muted);letter-spacing:0;text-transform:none;font-family:inherit;flex:0 0 auto}
+.agentLine .value{word-break:break-all;overflow-wrap:anywhere;font-size:12px;min-width:0}
+.agentTestBtn{grid-column:2;grid-row:1;justify-self:end;margin-top:0}
+.kv{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card2)}
+.k{font-size:12px;color:var(--muted);margin-bottom:6px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.v{word-break:break-all}
+button,input,select,textarea{font:inherit}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card2);color:var(--text);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{min-height:82px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form{display:grid;gap:10px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+button{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:10px;padding:10px 13px;cursor:pointer}
+button:hover{background:#1c2230}
+button.primary{background:var(--accent);border-color:var(--accent);color:#0b1020;font-weight:700}
+button.primary:hover{filter:brightness(1.06)}
+button.danger{border-color:#5a2430;color:#ff9aa5;background:#231016}
+button.ghost{background:transparent}
+.small{font-size:12px;padding:7px 9px;border-radius:8px}
+.providers{display:grid;gap:12px}
+.provider{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--card2)}
+.phead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.pname{font-size:18px;font-weight:650}
+.pmeta{font-size:12px;color:var(--muted);word-break:break-all;margin-top:4px}
+.models{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:13px}
+.chip.active{border-color:var(--accent)}
+.toolGrid{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.toolBtn{min-height:36px;padding:6px 10px;border-radius:999px;font-size:13px}
+.toolBtn.on{border-color:var(--accent);color:var(--accent);background:#1a2030}
+.toolBtn.off{opacity:.72}
+.toolBtn.active{outline:1px solid var(--accent)}
+.chip button{padding:0;border:0;background:transparent;color:var(--red)}
+.cmds{display:grid;gap:8px}
+.cmd{display:flex;justify-content:space-between;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card2)}
+.cmd code{color:var(--accent)}
+.muted{color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:12px 16px;border-radius:12px;display:none;max-width:90%;z-index:var(--z-toast)}
+.login{min-height:100vh;display:grid;place-items:center;padding:20px}
+.login .card{width:min(420px,100%)}
+.hidden{display:none!important}
+.hr{height:1px;background:var(--line);margin:14px 0}
+.warn{color:var(--yellow)}
+.testbar{display:grid;grid-template-columns:1fr 220px 160px;gap:10px;align-items:end}
+.results{display:grid;gap:10px;margin-top:14px}
+.result{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--card2)}
+.result.ok{border-color:rgba(62,207,142,.55)}
+.result.bad{border-color:rgba(255,107,122,.55)}
+.rhead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pill{border-radius:999px;padding:4px 8px;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.pill.ok{background:rgba(62,207,142,.12);color:var(--green)}
+.pill.bad{background:rgba(255,107,122,.12);color:var(--red)}
+.reply{white-space:pre-wrap;margin-top:8px}
+.err{white-space:pre-wrap;margin-top:8px;color:#ff9aa5}
+.agentTestBtn{justify-self:start;margin-top:2px;min-height:32px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--text);font-size:12px;font-weight:700}
+.agentTestBtn:hover{border-color:var(--accent);color:var(--accent)}
+.agentInlineResult .results{margin-top:8px}
+.agentInlineResult .result{padding:10px}
+.agentInlineResult .reply,.agentInlineResult .err{font-size:13px;line-height:1.45}
+.testLogToggle{margin-top:12px}
+.testLog{margin-top:10px;border:1px solid var(--line);border-radius:12px;background:var(--card2);overflow:hidden}
+.testLogHead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.testLogHead b{font-size:14px}
+.testLogHead button{min-height:30px;padding:5px 9px;font-size:12px}
+.testLogBody{max-height:240px;overflow:auto;padding:10px 12px;font-size:12px;line-height:1.55;display:grid;gap:5px}
+.logLine{display:grid;grid-template-columns:auto 1fr;gap:8px;border-left:2px solid var(--line);padding-left:8px}
+.logTime{color:var(--muted)}
+.logLine.ok{border-left-color:var(--green);color:#bdf7d7}
+.logLine.bad{border-left-color:var(--red);color:#ffb3bd}
+.logLine.run{border-left-color:var(--accent)}
+.logLine.warn{border-left-color:var(--yellow);color:#ffe3a0}
+.audioGrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+.audioBox audio{width:100%;margin-top:10px}
+.file{padding:11px 12px;border:1px dashed var(--line);border-radius:10px;background:var(--card2);color:var(--muted)}
+.modelList{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}
+.modelItem{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px;display:grid;gap:9px;position:relative}
+.modelItem.active{border-color:var(--accent)}
+.modelName{font-size:14px;font-weight:700;line-height:1.35;word-break:break-word;padding-right:28px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.modelBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modelBtns button{min-height:42px;padding:10px;font-weight:700}
+.modelBtns .testBtn{background:var(--accent);border-color:var(--accent);color:#0b1020;grid-column:1/-1}
+.deleteModelBtn{position:absolute;right:8px;top:8px;width:28px;height:28px;min-height:28px;padding:0;border-radius:999px;border:1px solid #5a2430;color:#ff9aa5;background:#231016;font-weight:900}
+.provider .actions input{min-height:44px}
+.modelResult{grid-column:1/-1}
+.modelResult .results{margin-top:4px}
+.modelResult .result{margin-top:4px;padding:10px;border-radius:12px}
+.modelResult .rhead{display:grid;gap:6px}
+.modelResult .reply,.modelResult .err{font-size:14px;line-height:1.45}
+.modelResult .pmeta{font-size:11px}
+.modelCollapse{width:100%;min-height:46px;margin-top:10px;border-radius:12px;border:1px dashed var(--line);background:transparent;color:var(--text);font-weight:700}
+.modelCollapse:hover{border-color:var(--accent);color:var(--accent)}
+.modelCount{color:var(--muted);font-size:12px;margin-top:8px}
+.providerTools{display:grid;grid-template-columns:1.2fr .9fr;gap:10px;margin:10px 0 12px}
+.providerPager{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.providerPager button{min-height:38px}
+.providerPager input{width:86px;min-height:38px;padding:8px 10px}
+.providerSummary{color:var(--muted);font-size:13px;margin:4px 0 10px}
+.providerJump{min-width:0}
+.usageBlock{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.usageHead{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:10px}
+.usageHead h2{margin:0;font-size:20px}
+.usageGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.usageMini{padding:11px;border:1px solid var(--line);border-radius:12px;background:var(--card2)}
+.usageMini .num{font-size:20px;font-weight:700;word-break:break-all}
+.usageMini .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.usageModels{grid-column:1/-1;border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:11px}
+.usageModelRow{display:grid;grid-template-columns:1fr auto;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.usageModelRow:first-child{border-top:0}
+.mimoAudioBtn{width:100%;min-height:48px;margin-top:10px;border:1px solid var(--accent);border-radius:12px;background:transparent;color:var(--accent);font-weight:800}
+.modal{position:fixed;inset:0;z-index:var(--z-modal)}
+.modalBackdrop{position:absolute;inset:0;background:rgba(8,10,16,.72)}
+.modalPanel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(980px,calc(100vw - 22px));max-height:88vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+.modalHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.modalHead h2{margin:0}
+.modalHead p{margin:4px 0 0}
+.commandEntry{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.commandEntry .primary{min-height:46px}
+.commandPage{width:min(760px,calc(100vw - 22px))}
+.commandPage .cmds{margin-top:10px}
+.commandPage .cmd{align-items:flex-start}
+.commandPage .cmd code{font-size:15px}
+.commandPage .muted{word-break:break-word}
+.panelSection{display:none}
+.panelSection.activeSection{display:block}
+.pageHint{margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.4}
+.imgActions{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.imgActions .ghostSm{flex:0 0 auto;min-height:40px;padding:0 12px}
+.imgActions .primary{flex:1 1 140px}
+.grid.panelPages{display:block}
+.grid.panelPages .panelSection{margin-top:0}
+.sideMenu{
+  position:fixed;left:0;top:0;bottom:0;width:226px;z-index:var(--z-menu);
+  border-right:1px solid var(--line);background:var(--panel);
+  padding:18px 14px;display:flex;flex-direction:column;gap:10px;overflow:auto;
+  transform:none;
+}
+@media(min-width:901px){
+  .mobileMenuBtn{display:none!important}
+  .sideMenu{transform:none!important;visibility:visible}
+  .wrap{padding-left:248px}
+}
+.sideBrand{padding:4px 6px 14px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.sideBrand b{display:block;font-size:20px;font-weight:650}
+.sideBrand span{display:block;margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45}
+.sideNav{display:grid;gap:6px}
+.sideNav button{width:100%;min-height:42px;text-align:left;border-radius:10px;background:transparent;font-weight:650;display:flex;align-items:center;gap:9px}
+.sideNav button:hover,.sideNav button.active{border-color:var(--accent);color:var(--accent);background:#1a2030}
+.sideFoot{margin-top:auto;color:var(--muted);font-size:12px;line-height:1.45;padding:10px 4px 4px}
+.mobileMenuBtn{display:none;flex:0 0 auto;min-height:36px;padding:0 12px;border-radius:10px;background:var(--accent);border:0;color:#0b1020;font-weight:800}
+.menuShade{display:none;position:fixed;inset:0;z-index:var(--z-shade);background:rgba(0,0,0,.55)}
+@media(max-width:1100px){.current{grid-template-columns:1fr}}
+@media(max-width:900px){
+  .wrap{padding:12px 12px 28px;overflow-x:hidden}
+  .top{margin:0 -12px 10px;padding:10px 12px;flex-direction:row;align-items:center;gap:10px}
+  .title{flex:0 0 auto}
+  .title h1{font-size:18px;line-height:1}
+  .title .eyebrow,.deskHint{display:none}
+  .topRight{flex:1;min-width:0}
+  .badge{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .badge::-webkit-scrollbar{display:none}
+  .statusChip{flex:0 0 auto;width:auto;min-height:32px;padding:4px 10px;font-size:12px}
+  .mobileMenuBtn{display:inline-flex;align-items:center;justify-content:center}
+  .sideMenu{width:min(82vw,280px);transform:translateX(-100%);transition:transform .18s ease}
+  .sideMenu.open{transform:translateX(0)}
+  .menuShade.show{display:block}
+  .sideNav button{min-height:48px}
+  .sideFoot{display:none}
+  .testbar,.audioGrid{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .current{grid-template-columns:1fr}
+  .agentCard{padding:10px;grid-template-columns:1fr}
+  .agentTestBtn{grid-column:1;grid-row:auto;width:100%;min-height:40px}
+  .agentModel{font-size:14px}
+  .row{grid-template-columns:1fr}
+  .modelList{grid-template-columns:1fr}
+  .modelBtns{grid-template-columns:1fr 1fr}
+  .modelBtns button{font-size:15px}
+  .modelBtns button:last-child{grid-column:1/-1}
+  .provider{padding:12px}
+  .phead{display:grid;gap:8px}
+  .phead>.actions{align-self:stretch;width:100%;display:grid;grid-template-columns:1fr auto}
+  .phead .danger,.phead .primary{min-height:42px}
+  .actions{align-items:stretch}
+  .actions button,.actions select,.actions input{min-height:44px}
+  .testbar textarea{min-height:96px}
+  .testLogBody{max-height:180px;font-size:11px}
+  .providerTools{grid-template-columns:1fr}
+  .providerPager{display:grid;grid-template-columns:1fr 1fr;align-items:stretch}
+  .providerPager input{width:100%}
+  .providerPager .wide{grid-column:1/-1}
+  .providerPager button{min-height:42px}
+  .usageGrid{grid-template-columns:1fr 1fr}
+  #settingsSection .actions{display:grid;grid-template-columns:1fr}
+  #settingsSection .actions select{max-width:none!important}
+  #restartAgent{width:100%}
+  #toast{left:12px;right:12px;transform:none;bottom:16px;max-width:none}
+  .commandEntry{display:grid;grid-template-columns:1fr}
+  .commandEntry .primary{width:100%}
+  .commandPage{width:calc(100vw - 18px)}
+  .modalPanel{top:52%;max-height:84vh;padding:12px}
+  .modalHead{position:sticky;top:0;z-index:2;background:var(--panel);padding-bottom:8px}
+}
+</style>
+</head>
+<body>
+  <div id="login" class="login hidden"><div class="card"><h2>Hermes 模型面板</h2><p class="muted">请输入管理员密码</p><div class="form"><input id="password" type="password" placeholder="管理员密码" autocomplete="current-password"><button class="primary" onclick="login()">登录</button></div></div></div>
+  <main id="app" class="wrap hidden">
+    <div id="menuShade" class="menuShade" onclick="toggleSideMenu(false)"></div>
+    <aside id="sideMenu" class="sideMenu" aria-label="功能菜单"><div class="sideBrand"><b>模型台</b></div><nav class="sideNav"><button type="button" data-target="currentSection" onclick="goSection('currentSection',this)">📌 当前模型</button><button type="button" data-target="addSection" onclick="goSection('addSection',this)">➕ 添加中转站</button><button type="button" data-target="testSection" onclick="goSection('testSection',this)">🧪 中转站测试</button><button type="button" data-target="providersSection" onclick="goSection('providersSection',this)">🧩 中转站与模型</button><button type="button" data-target="imageGenSection" onclick="goSection('imageGenSection',this)">🎨 生图模型选择</button><button type="button" data-target="chatToolsSection" onclick="goSection('chatToolsSection',this)">💬 聊天平台</button><button type="button" data-target="commandsSection" onclick="goSection('commandsSection',this)">⚡ TG 快捷命令</button><button type="button" data-target="settingsSection" onclick="goSection('settingsSection',this)">⚙️ 设置</button></nav><div class="sideFoot">手机端选择功能后会自动隐藏菜单。</div></aside>
+    <div class="top"><button id="mobileMenuBtn" class="mobileMenuBtn" type="button" onclick="toggleSideMenu(true)">☰ 功能</button><div class="title"><h1>模型台</h1></div><div class="topRight"><div class="badge" id="serviceStatus" aria-label="agent 状态"></div></div></div>
+    <div class="grid panelPages" style="margin-top:18px">
+      <section id="currentSection" class="card panelSection activeSection"><h2>当前模型</h2><p class="pageHint">有几个 agent 列几个。切完要生效请 /reset 或到设置里重启。</p><div id="current" class="current"></div><div class="actions"><button class="primary" onclick="loadState()">刷新当前状态</button></div></section>
+      <section id="addSection" class="card panelSection"><h2>添加中转站</h2><div class="form"><div class="row"><input id="addName" placeholder="名称，例如 3号abc"><select id="addMode"><option value="chat_completions">OpenAI API（/v1/chat/completions）</option><option value="anthropic_messages">Claude API（/v1/messages）</option><option value="responses">OpenAI Responses（/v1/responses）</option><option value="codex_responses">Codex Responses（/v1/responses）</option></select></div><input id="addUrl" placeholder="Base URL，例如 OpenAI: https://api.xxx.com/v1；Claude: https://xxx.com/v1"><div class="muted">接口格式：OpenAI 走 /chat/completions；Claude 走 /messages。像 unlimited.surf 请选择 Claude API。</div><input id="addKey" type="password" placeholder="API Key"><div class="row"><input id="addModel" placeholder="默认模型，例如 gpt-5.5 或 claude-opus-4-7-20260101"><button type="button" onclick="fetchModelsForAdd()">一键获取模型</button></div><textarea id="addModels" placeholder="其它模型，每行一个，可选"></textarea><button class="primary" onclick="addProvider()">添加并生成编号</button></div></section>
+    </div>
+    <section id="testSection" class="card panelSection" style="margin-top:18px"><h2>中转站测试</h2><p class="muted">直接在这里测试中转是否真实可回复；不会切换当前模型配置。可测上面任意 agent 当前可用。</p><div class="testbar"><div><div class="k">测试消息</div><textarea id="testMessage" placeholder="请输入测试内容">你好，请用一句话回复：测试成功</textarea></div><div><div class="k">选择范围</div><select id="testTarget"><option value="current">当前使用</option><option value="all">测试全部</option></select></div><div class="actions"><button class="primary" onclick="runTest()">开始测试</button></div></div><div class="testLogToggle"><button type="button" id="testLogToggleBtn" onclick="toggleTestLog()">查看检测日志</button></div><div class="testLog hidden" id="testLog"><div class="testLogHead"><b>检测日志</b><div class="actions" style="margin-top:0"><button type="button" onclick="clearTestLog()">清空</button><button type="button" onclick="toggleTestLog(false)">收起</button></div></div><div id="testLogBody" class="testLogBody"><div class="muted">等待开始检测...</div></div></div><div id="testResults" class="results"></div></section>
+    <section id="providersSection" class="card panelSection" style="margin-top:18px"><h2>中转站与模型</h2><div class="providerTools"><input id="providerSearch" type="search" placeholder="搜索中转站 / Base URL / 模型名" oninput="providerSearchChanged()"><select id="providerJump" class="providerJump" onchange="jumpProvider(this.value)"><option value="">一键到达中转站...</option></select><div class="providerPager"><button type="button" onclick="gotoProviderPage(1)">首页</button><button type="button" onclick="gotoProviderPage(PROVIDER_PAGE-1)">上一页</button><input id="providerPageInput" type="number" min="1" value="1" onchange="gotoProviderPage(this.value)" aria-label="页码"><button type="button" onclick="gotoProviderPage(PROVIDER_PAGE+1)">下一页</button><button type="button" onclick="gotoProviderPage(999999)">末页</button><span id="providerPageInfo" class="muted wide"></span></div></div><div id="providerSummary" class="providerSummary"></div><div id="providers" class="providers"></div></section>
+
+    <section id="imageGenSection" class="card panelSection" style="margin-top:18px"><h2>生图模型选择</h2><p class="pageHint">按当前中转拉列表，点「获取」才请求。</p><div id="imageGenBox" class="providers"></div></section>
+    <section id="chatToolsSection" class="card panelSection" style="margin-top:18px"><h2>聊天平台</h2><p class="pageHint">按 agent 看已接上的平台，也能给这个 agent 添加平台。密钥不回显。保存后要到设置里重启对应 Gateway 才进线。</p><div class="actions" style="margin-top:0"><button type="button" onclick="loadChatPlatforms()">刷新状态</button></div><div id="chatToolsBox" class="providers"></div></section>
+    <section id="commandsSection" class="card panelSection" style="margin-top:18px"><div class="commandEntry"><div><h2 style="margin:0 0 6px">TG 快捷命令</h2><p class="muted" style="margin:0">已收入二级页面，点击后查看完整 Telegram 命令列表。</p></div><button class="primary" type="button" onclick="openCommandsPage()">查看 TG 快捷命令</button></div></section>
+      <section id="settingsSection" class="card panelSection" style="margin-top:18px"><h2>设置</h2><p class="muted">低频维护操作集中放在这里，避免当前模型页被按钮挤满。</p><div class="usageBlock" style="border-top:0;padding-top:0"><div class="usageHead"><h2>API 使用量</h2><span id="usageSource" class="muted">点击按钮查看</span></div><div class="actions" style="margin-top:0"><button class="primary" type="button" onclick="toggleUsage()" id="usageToggleBtn">查看 API 使用量</button></div><div id="usage" class="usageGrid hidden"></div></div><div class="hr"></div><h2>Gateway 与快捷命令</h2><div class="actions"><button onclick="rebuildCommands()">重建 TG 快捷命令</button><button class="ghost" onclick="loadState()">刷新面板状态</button><select id="restartAgent" style="max-width:180px"></select><button class="danger" onclick="restartGateway()">重启 Gateway</button></div><p class="muted">重启会中断对应 agent 当前正在运行的任务；只在切换配置未生效或需要刷新 TG 命令时使用。</p></section>
+  </main>
+  <div id="mimoModal" class="modal hidden"><div class="modalBackdrop" onclick="closeMimoAudio()"></div><div class="modalPanel"><div class="modalHead"><div><h2>小米 MiMo 语音工具</h2><p class="muted">当前小米中转检测到 ASR/TTS 模型后显示此入口。</p></div><button class="danger" onclick="closeMimoAudio()">关闭</button></div>
+    <div class="audioGrid">
+      <section class="card audioBox"><h2>小米 MiMo ASR 语音识别</h2><p class="muted">上传 mp3/wav，使用 mimo-v2.5-asr 识别文字。</p><div class="form"><input id="asrFile" class="file" type="file" accept="audio/mpeg,audio/mp3,audio/wav,.mp3,.wav"><select id="asrLang"><option value="auto">自动识别语言</option><option value="zh">中文</option><option value="en">英文</option></select><button class="primary" onclick="runAsr()">开始识别</button></div><div id="asrResult" class="results"></div></section>
+      <section class="card audioBox"><h2>小米 MiMo TTS 语音合成</h2><p class="muted">输入文字，使用 MiMo TTS 生成音频。</p><div class="form"><select id="ttsModel"><option value="mimo-v2.5-tts">mimo-v2.5-tts 内置音色</option><option value="mimo-v2.5-tts-voicedesign">mimo-v2.5-tts-voicedesign 文字设计音色</option></select><div class="row"><select id="ttsVoice"><option>冰糖</option><option>茉莉</option><option>苏打</option><option>白桦</option><option>Mia</option><option>Chloe</option><option>Milo</option><option>Dean</option><option>mimo_default</option></select><select id="ttsFormat"><option value="wav">wav</option><option value="mp3">mp3</option></select></div><textarea id="ttsStyle" placeholder="风格提示，可选">用温柔、自然、稍微活泼一点的中文女声朗读。</textarea><textarea id="ttsText" placeholder="要朗读的文字">你好，我是小米 MiMo 语音合成模型，测试成功。</textarea><button class="primary" onclick="runTts()">生成语音</button></div><div id="ttsResult" class="results"></div></section>
+    </div>
+  </div></div>
+  <div id="commandsModal" class="modal hidden"><div class="modalBackdrop" onclick="closeCommandsPage()"></div><div class="modalPanel commandPage"><div class="modalHead"><div><h2>TG 快捷命令</h2><p class="muted">点击关闭返回模型面板主页面。</p></div><button class="danger" onclick="closeCommandsPage()">关闭</button></div><div id="commands" class="cmds"></div></div></div>
+  <div id="toast" class="toast"></div>
+<script>
+let STATE=null;
+let PROVIDER_PAGE=1;
+const PROVIDER_PAGE_SIZE=2;
+let PROVIDER_SEARCH='';
+const EXPANDED_PROVIDERS=new Set();
+const $=id=>document.getElementById(id);
+const API_BASE=(document.querySelector('base')?.getAttribute('href')||window.location.pathname).replace(/\/$/,'')+'/api';
+function toggleSideMenu(open){const m=$('sideMenu');const shade=$('menuShade');if(!m)return;const show=open===undefined?!m.classList.contains('open'):!!open;m.classList.toggle('open',show);if(shade)shade.classList.toggle('show',show)}
+const MOBILE_MENU_MQ=window.matchMedia('(max-width:900px)');
+function syncMenuToViewport(){
+  if(!MOBILE_MENU_MQ.matches){
+    toggleSideMenu(false);
+    const m=$('sideMenu');
+    if(m){m.style.transform='';m.classList.remove('open')}
+  }
+}
+if(MOBILE_MENU_MQ.addEventListener)MOBILE_MENU_MQ.addEventListener('change',syncMenuToViewport);
+else if(MOBILE_MENU_MQ.addListener)MOBILE_MENU_MQ.addListener(syncMenuToViewport);
+window.addEventListener('resize',syncMenuToViewport);
+function markSideActive(target){document.querySelectorAll('.sideNav button').forEach(b=>b.classList.toggle('active',b.dataset.target===target))}
+function showPanel(id){document.querySelectorAll('.panelSection').forEach(el=>el.classList.toggle('activeSection',el.id===id));markSideActive(id);try{history.replaceState(null,'','#'+id)}catch{} window.scrollTo({top:0,behavior:'smooth'})}
+function goSection(id,btn){const el=$(id);if(!el)return;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(window.matchMedia('(max-width:900px)').matches)toggleSideMenu(false)}
+function initPanelPage(){const wanted=(location.hash||'').replace('#','');const first=document.querySelector('.panelSection')?.id||'currentSection';showPanel($(wanted)?wanted:first)}
+requestAnimationFrame(()=>document.body.classList.add('ready'));
+function warmHome(){try{fetch('/',{credentials:'same-origin',cache:'reload'}).catch(()=>{})}catch{}}
+document.querySelectorAll('[data-home-link]').forEach(a=>{a.addEventListener('pointerenter',warmHome,{once:true});a.addEventListener('touchstart',warmHome,{once:true,passive:true});});
+function toast(msg){const t=$('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',3200)}
+function nowTime(){return new Date().toLocaleTimeString('zh-CN',{hour12:false})}
+function clearTestLog(){const box=$('testLogBody'); if(box) box.innerHTML='<div class="muted">日志已清空，等待开始检测...</div>'}
+function setTestLogVisible(visible){const log=$('testLog'); const btn=$('testLogToggleBtn'); if(!log)return; log.classList.toggle('hidden', !visible); if(btn) btn.textContent=visible?'隐藏检测日志':'查看检测日志'}
+function toggleTestLog(force){const log=$('testLog'); const visible=force===undefined?(log?.classList.contains('hidden')!==false):!!force; setTestLogVisible(visible)}
+function appendTestLog(msg,type='run'){const box=$('testLogBody'); if(!box)return; const stick=box.scrollHeight-box.scrollTop-box.clientHeight<24; if(box.querySelector('.muted'))box.innerHTML=''; const row=document.createElement('div'); row.className='logLine '+type; row.innerHTML='<span class="logTime">'+esc(nowTime())+'</span><span>'+esc(msg)+'</span>'; box.appendChild(row); if(stick) box.scrollTop=box.scrollHeight}
+function summarizeResult(r){if(!r)return '没有返回结果'; const status=(r.ok?'可用':'不可用/空回复')+' · HTTP '+(r.http_status??'-')+' · '+(r.latency_ms??'-')+'ms'; return (r.providerIndex||'-')+'号 '+(r.provider_name||'-')+' / '+(r.model||'-')+'：'+status+(r.ok?'':' · '+(r.error||'测试失败'))}
+function resultLogType(r){return r&&r.ok?'ok':'bad'}
+async function api(path, opts={}){const r=await fetch(API_BASE+path,{headers:{'Content-Type':'application/json'},...opts});let j={};try{j=await r.json()}catch{} if(r.status===401){showLogin();throw new Error(j.error||'未授权')} if(!r.ok||j.ok===false)throw new Error(j.error||r.statusText);return j}
+function showLogin(){ const app=$('app'); if(app) app.classList.add('hidden'); const login=$('login'); if(login) login.classList.remove('hidden') }
+function showApp(){ $('login').classList.add('hidden'); const app=$('app'); app.classList.remove('hidden','entering'); void app.offsetWidth; app.classList.add('entering') }
+async function login(){await loadState()}
+async function logout(){await loadState()}
+
+function imageModelsFor(agentId, current){
+  const live=window.IMAGE_MODELS&&window.IMAGE_MODELS[agentId];
+  const list=(live&&live.length?live:(STATE.image_models||[])).slice();
+  if(current&&!list.includes(current)) list.unshift(current);
+  if(!list.length) list.push('gpt-image-2','gpt-image-2-medium','gpt-image-1.5','gpt-image-1');
+  return Array.from(new Set(list.filter(Boolean)));
+}
+function imageAgentCard(a){
+  const ig=a.image_gen||{};
+  const cur=a.current||{};
+  const current=ig.model||ig.openai_model||'';
+  const models=imageModelsFor(a.id,current);
+  const hint=(window.IMAGE_MODEL_HINT&&window.IMAGE_MODEL_HINT[a.id])||'';
+  const opts=models.map(m=>`<option value="${escAttr(m)}" ${m===current?'selected':''}>${esc(m)}</option>`).join('');
+  const relay=cur.provider_name||cur.provider||ig.provider||'-';
+  const url=cur.base_url||ig.base_url||'-';
+  return `<div class="agentCard"><div class="agentTop"><div class="agentName">${esc(a.profile||a.id)}</div><div class="agentProfile">生图</div></div><div class="agentLine"><div class="label">生图</div><div class="value">${esc(current||'-')}</div></div><div class="agentLine"><div class="label">中转</div><div class="value">${esc(relay)} · ${esc(url)}</div></div><select id="image_model_${escAttr(a.id)}">${opts}</select><div class="imgActions"><button type="button" class="ghostSm" onclick="fetchImageModels('${escAttr(a.id)}')">获取</button><button class="primary" onclick="switchImageGen('${escAttr(a.id)}')">切 ${esc(agentLabel(a.id))}</button></div>${hint?`<div class="muted">${esc(hint)}</div>`:''}</div>`;
+}
+function renderImageGen(){
+  const box=$('imageGenBox');if(!box)return;
+  const agents=STATE.agents&&STATE.agents.length?STATE.agents:[];
+  const union=Array.from(new Set(agents.flatMap(a=>imageModelsFor(a.id,a.image_gen&&(a.image_gen.model||a.image_gen.openai_model)))));
+  box.innerHTML=`<div class="current">${agents.map(imageAgentCard).join('')}</div><div class="actions"><button type="button" onclick="fetchImageModels('all')">全部获取对应中转</button><select id="imageModelAll" style="max-width:260px">${union.map(m=>`<option value="${escAttr(m)}">${esc(m)}</option>`).join('')}</select><button class="primary" onclick="switchImageGen('all')">全部都切</button></div>`;
+}
+async function fetchImageModels(agent){
+  const ids=agent==='all'?knownAgents().map(a=>a.id):[agent];
+  window.IMAGE_MODELS=window.IMAGE_MODELS||{};
+  window.IMAGE_MODEL_HINT=window.IMAGE_MODEL_HINT||{};
+  for(const id of ids){
+    window.IMAGE_MODEL_HINT[id]='正在从对应中转获取…';
+    renderImageGen();
+    try{
+      const r=await api('/image-gen/models',{method:'POST',body:JSON.stringify({agent:id})});
+      window.IMAGE_MODELS[id]=r.models||[];
+      const n=(r.models||[]).length;
+      window.IMAGE_MODEL_HINT[id]=r.fallback
+        ?`中转 ${r.relay?.name||''} 拉列表失败，已用本地已有 ${n} 个${r.error?('：'+r.error):''}`
+        :`已从 ${r.relay?.name||'中转'} 获取 ${n} 个生图模型`;
+    }catch(e){
+      window.IMAGE_MODEL_HINT[id]='获取失败：'+e.message;
+    }
+    renderImageGen();
+  }
+}
+async function switchImageGen(agent){const model=agent==='all'?$('imageModelAll').value:$('image_model_'+agent).value;if(!confirm('确定把 '+agentLabel(agent)+' 的生图模型切换到 '+model+'？\\n将写入该 agent 配置，中转按它当前正在用的那家。'))return;try{const r=await api('/image-gen/switch',{method:'POST',body:JSON.stringify({agent,model})});STATE=r.state;renderImageGen();toast('已切换生图模型：'+agentLabel(agent)+' / '+model)}catch(e){toast(e.message)}}
+function renderCurrent(c){
+  const agents=STATE.agents&&STATE.agents.length?STATE.agents:[{id:'default',name:'Agent1',profile:'agent1',current:c||{}}];
+  const stMap=window.AGENT_STATUS||{};
+  $('current').innerHTML=agents.map(a=>{const x=a.current||{};const label=a.profile||a.id;const key=String(a.profile||a.id||'');const st=stMap[key]||stMap[a.id]||'';const on=/active|ok|running|up/i.test(st);return `<div class="agentCard"><div class="agentTop"><div class="agentName"><span class="dot ${on?'on':(st?'off':'')}"></span>${esc(label)}</div>${st?`<div class="agentProfile">${esc(st)}</div>`:''}</div><button class="agentTestBtn" type="button" onclick="testAgentCurrent('${escAttr(a.id||'default')}')">测试当前可用</button><div class="agentModel">${esc(x.model||'-')}</div><div class="agentMeta"><div class="agentLine"><div class="label">中转</div><div class="value">${esc(x.provider_name||x.provider||'-')}</div></div><div class="agentLine"><div class="label">地址</div><div class="value">${esc(x.base_url||'-')}</div></div></div><div class="agentInlineResult" id="agent_test_${escAttr(a.id||'default')}"></div>${a.error?`<div class="err">${esc(a.error)}</div>`:''}</div>`}).join('')
+}
+let USAGE_LOADED=false;
+function fmtNum(n){return Number(n||0).toLocaleString('zh-CN')}
+function hasMoney(b){return Number(b?.actual_cost||0)>0 || Number(b?.estimated_cost||0)>0}
+function fmtMoney(n){return '$'+Number(n||0).toFixed(4)}
+function moneyLine(b){return hasMoney(b)?`费用：预估 ${fmtMoney(b.estimated_cost)} / 实际 ${fmtMoney(b.actual_cost)}`:'费用未记录：当前自定义中转站没有 Hermes 价格表或实际扣费回传'}
+function usageBox(label, b){return `<div class="usageMini"><div class="k">${label}</div><div class="num">${fmtNum(b.total_tokens)}</div><div class="sub">输入 ${fmtNum(b.input_tokens)} / 输出 ${fmtNum(b.output_tokens)} · 调用 ${fmtNum(b.api_calls)}</div><div class="sub">会话 ${fmtNum(b.sessions)} · ${moneyLine(b)}</div></div>`}
+function shortUrl(u){try{const x=new URL(u);return x.host+x.pathname.replace(/\/$/,'')}catch{return u||''}}
+async function toggleUsage(){
+  const box=$('usage'); const btn=$('usageToggleBtn'); if(!box) return;
+  if(!box.classList.contains('hidden')){box.classList.add('hidden'); if(btn) btn.textContent='查看 API 使用量'; $('usageSource').textContent=USAGE_LOADED?'已隐藏':'点击按钮查看'; return;}
+  box.classList.remove('hidden'); if(btn) btn.textContent=USAGE_LOADED?'隐藏 API 使用量':'读取中...';
+  if(!USAGE_LOADED) await loadUsage();
+  if(btn) btn.textContent='隐藏 API 使用量';
+}
+async function loadUsage(){
+  const box=$('usage'); if(!box) return;
+  box.innerHTML='<div class="muted">正在读取 Hermes 对话 token 用量...</div>';
+  try{
+    const u=await api('/usage');
+    if(!u.ok) throw new Error(u.error||'使用量读取失败');
+    USAGE_LOADED=true;
+    const moneyNote=hasMoney(u.total)?'已记录费用':'费用未记录';
+    $('usageSource').textContent='Hermes 对话 · '+moneyNote+' · '+(u.total.last_at_iso||'暂无记录');
+    const providers=(u.by_provider||[]).map(p=>`<div class="usageModelRow"><div><b>${esc(p.provider||'-')}</b><div class="sub">${esc(shortUrl(p.base_url))}</div><div class="sub">调用 ${fmtNum(p.api_calls)} · 输入 ${fmtNum(p.input_tokens)} / 输出 ${fmtNum(p.output_tokens)}</div><div class="sub">${moneyLine(p)}</div></div><div class="v">${fmtNum(p.total_tokens)}</div></div>`).join('') || '<div class="muted">暂无中转站统计</div>';
+    const models=(u.by_model||[]).map(m=>`<div class="usageModelRow"><div><b>${esc(m.model||'-')}</b><div class="sub">${esc(m.provider||'-')} · ${esc(shortUrl(m.base_url))}</div><div class="sub">调用 ${fmtNum(m.api_calls)} · 输入 ${fmtNum(m.input_tokens)} / 输出 ${fmtNum(m.output_tokens)}</div><div class="sub">${moneyLine(m)}</div></div><div class="v">${fmtNum(m.total_tokens)}</div></div>`).join('') || '<div class="muted">暂无模型统计</div>';
+    box.innerHTML=usageBox('最近 24 小时',u.last_24h||{})+usageBox('最近 7 天',u.last_7d||{})+usageBox('累计全部',u.total||{})+`<div class="usageModels"><div class="k">最近 7 天按中转站</div>${providers}</div><div class="usageModels"><div class="k">最近 7 天按模型</div>${models}</div>`;
+  }catch(e){
+    $('usageSource').textContent='读取失败';
+    box.innerHTML='<div class="err">'+esc(e.message)+'</div>';
+  }
+}
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function apiModeLabel(mode){const m=String(mode||'');return {chat_completions:'OpenAI API',responses:'OpenAI Responses',codex_responses:'Codex Responses',anthropic_messages:'Claude API'}[m]||m}
+function resultId(providerIndex, model){return 'model_result_'+providerIndex+'_'+btoa(unescape(encodeURIComponent(model))).replace(/[^a-zA-Z0-9]/g,'_')}
+function hasMimoAudio(p){const ms=(p.models||[]).map(x=>String(x).toLowerCase());return ms.some(m=>m.includes('mimo')&&(m.includes('asr')||m.includes('tts')))}
+function openMimoAudio(providerIndex){const modal=$('mimoModal'); if(modal) modal.classList.remove('hidden'); toast('打开小米语音工具')}
+function closeMimoAudio(){const modal=$('mimoModal'); if(modal) modal.classList.add('hidden')}
+function isActiveForAgent(agentId,p,m){const a=(STATE.agents||[]).find(x=>x.id===agentId);const c=a?.current||{};const ps=String(p.slug||'');const cs=String(c.provider_slug||c.provider||'');if(cs&&cs!=='custom'&&ps&&cs===ps)return c.model===m;return c.base_url===p.base_url&&c.model===m&&(!c.provider_slug||c.provider_slug==='custom')}
+function knownAgents(){return (STATE&&STATE.agents&&STATE.agents.length)?STATE.agents:[]}
+function agentLabel(id){if(id==='all'||id==='both')return '全部 Agent';const a=knownAgents().find(x=>x.id===id||x.profile===id);return a?(a.profile||a.id):(id==='default'?'agent1':id)}
+function renderModelItem(p,m){
+  const agents=knownAgents();
+  const using=agents.filter(a=>isActiveForAgent(a.id,p,m));
+  const any=using.length>0;
+  const usingText=using.map(a=>`${esc(a.profile||a.id)} 正在用`).join(' ');
+  const switchBtns=agents.map(a=>`<button onclick="switchModel(${p.id},'${escAttr(m)}','${escAttr(a.id)}')">切 ${esc(a.profile||a.id)}</button>`).join('');
+  const allBtn=agents.length>1?`<button onclick="switchModel(${p.id},'${escAttr(m)}','all')">全部都切</button>`:'';
+  return `<div class="modelItem ${any?'active':''}"><button class="deleteModelBtn" title="删除模型" onclick="deleteModel(${p.id},'${encodeURIComponent(m)}')">×</button><div class="modelName">${esc(m)}</div><div class="sub">${usingText}</div><div class="modelBtns"><button class="testBtn" onclick="testOneModel(${p.id},'${escAttr(m)}')">测试</button>${switchBtns}${allBtn}</div><div class="modelResult" id="${resultId(p.id,m)}"></div></div>`
+}
+function renderTestTargets(ps){
+  const keep=$('testTarget').value;
+  const opts=knownAgents().map(a=>`<option value="agent:${escAttr(a.id)}">${esc(a.profile||a.id)} 当前可用</option>`);
+  opts.push('<option value="current">当前使用</option>','<option value="all">测试全部中转站（每站默认模型）</option>');
+  (ps||[]).forEach(p=>{
+    opts.push(`<option value="provider-all:${p.id}">${p.id}号 ${esc(p.name)} / 一键测试这个中转全部模型（${(p.models||[]).length} 个）</option>`);
+    (p.models||[]).forEach(m=>{opts.push(`<option value="p:${p.id}:${encodeURIComponent(m)}">${p.id}号 ${esc(p.name)} / ${esc(m)}</option>`)});
+  });
+  $('testTarget').innerHTML=opts.join('');
+  if([...$('testTarget').options].some(o=>o.value===keep)) $('testTarget').value=keep;
+}
+function renderRestartOptions(){
+  const sel=$('restartAgent'); if(!sel)return;
+  const keep=sel.value;
+  const opts=knownAgents().map(a=>`<option value="${escAttr(a.id)}">重启 ${esc(a.profile||a.id)}</option>`);
+  if(knownAgents().length>1) opts.push('<option value="all">全部重启</option>');
+  sel.innerHTML=opts.join('');
+  if([...sel.options].some(o=>o.value===keep)) sel.value=keep;
+}
+function toggleProviderModels(id){if(EXPANDED_PROVIDERS.has(id)) EXPANDED_PROVIDERS.delete(id); else EXPANDED_PROVIDERS.add(id); renderProviders(STATE.providers)}
+function providerText(p){return [p.id,p.name,p.base_url,p.api_mode,p.slug,p.api_key_redacted,...(p.models||[])].join(' ').toLowerCase()}
+function filteredProviders(ps){const q=(PROVIDER_SEARCH||'').trim().toLowerCase();return q?(ps||[]).filter(p=>providerText(p).includes(q)):(ps||[])}
+function providerPageCount(list){return Math.max(1,Math.ceil((list||[]).length/PROVIDER_PAGE_SIZE))}
+function providerSearchChanged(){PROVIDER_SEARCH=$('providerSearch')?.value||'';PROVIDER_PAGE=1;renderProviders(STATE.providers)}
+function gotoProviderPage(page){const list=filteredProviders(STATE.providers||[]);const max=providerPageCount(list);PROVIDER_PAGE=Math.min(max,Math.max(1,Number(page)||1));renderProviders(STATE.providers)}
+function jumpProvider(id){if(!id)return;const all=filteredProviders(STATE.providers||[]);const idx=all.findIndex(p=>String(p.id)===String(id));if(idx>=0){PROVIDER_PAGE=Math.floor(idx/PROVIDER_PAGE_SIZE)+1;EXPANDED_PROVIDERS.add(Number(id));renderProviders(STATE.providers);setTimeout(()=>document.getElementById('provider_'+id)?.scrollIntoView({behavior:'smooth',block:'start'}),80)}}
+function renderProviderControls(all, list, shown){const max=providerPageCount(list);if(PROVIDER_PAGE>max)PROVIDER_PAGE=max;const input=$('providerPageInput');if(input){input.max=max;input.value=PROVIDER_PAGE}const info=$('providerPageInfo');if(info)info.textContent=`第 ${PROVIDER_PAGE} / ${max} 页 · 每页 ${PROVIDER_PAGE_SIZE} 个`;const summary=$('providerSummary');if(summary){const modelCount=list.reduce((n,p)=>n+(p.models||[]).length,0);summary.textContent=`共 ${all.length} 个中转站，当前匹配 ${list.length} 个 / ${modelCount} 个模型；本页显示 ${shown.length} 个。`}const jump=$('providerJump');if(jump){const keep=jump.value;const opts=['<option value="">一键到达中转站...</option>'];list.forEach(p=>opts.push(`<option value="${escAttr(p.id)}">${p.id}号：${esc(p.name)}（${(p.models||[]).length} 模型）</option>`));jump.innerHTML=opts.join('');if([...jump.options].some(o=>o.value===keep))jump.value=keep;}}
+function renderProviderCard(p){const all=p.models||[];const expanded=EXPANDED_PROVIDERS.has(p.id);const shown=expanded?all:all.slice(0,2);const more=all.length>2;return `<div class="provider" id="provider_${p.id}"><div class="phead"><div><div class="pname">${p.id}号：${esc(p.name)}</div><div class="pmeta">${esc(p.base_url)} · ${esc(apiModeLabel(p.api_mode))} · key ${esc(p.api_key_redacted)}</div><div class="pmeta">${esc(p.slug)}</div>${more&&!expanded?`<div class="modelCount">已折叠：显示 2 / ${all.length} 个模型</div>`:''}</div><div class="actions"><button class="small" type="button" id="refreshModels_${p.id}" onclick="refreshProviderModels(${p.id})">重新获取模型</button><button class="small primary" onclick="testProviderAllModels(${p.id})">一键测试全部模型</button><button class="small danger" onclick="deleteProvider(${p.id})">删除</button></div></div>${hasMimoAudio(p)?`<button class="mimoAudioBtn" onclick="openMimoAudio(${p.id})">小米 MiMo 语音 ASR / TTS</button>`:''}<div class="modelList">${shown.map(m=>renderModelItem(p,m)).join('')}</div>${more?`<button class="modelCollapse" onclick="toggleProviderModels(${p.id})">${expanded?'收起':'展开全部 '+all.length+' 个模型'}</button>`:''}<div class="actions"><input id="model_${p.id}" placeholder="添加模型名" style="max-width:320px"><button class="small" onclick="addModel(${p.id})">添加模型</button></div></div>`}
+function renderProviders(ps){const all=ps||[];const list=filteredProviders(all);const max=providerPageCount(list);if(PROVIDER_PAGE>max)PROVIDER_PAGE=max;const start=(PROVIDER_PAGE-1)*PROVIDER_PAGE_SIZE;const shown=list.slice(start,start+PROVIDER_PAGE_SIZE);renderProviderControls(all,list,shown);$('providers').innerHTML=shown.map(renderProviderCard).join('')||(PROVIDER_SEARCH?'<p class="muted">没有匹配的中转站</p>':'<p class="muted">暂无中转站</p>')}
+function escAttr(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'')}
+function openCommandsPage(){const modal=$('commandsModal'); if(modal) modal.classList.remove('hidden')}
+function closeCommandsPage(){const modal=$('commandsModal'); if(modal) modal.classList.add('hidden')}
+function renderCommands(cs){const box=$('commands'); if(!box)return; box.innerHTML=cs.map(c=>`<div class="cmd"><div><code>/${esc(c.name)}</code><div class="muted">${esc(c.description)}</div></div><div class="muted">${esc(c.target)}</div></div>`).join('')||'<p class="muted">暂无快捷命令</p>'}
+let CHAT_PLATFORMS=null;
+const OPEN_PLATS=new Set();
+function platKey(agent,plat){return agent+'::'+plat}
+function fieldInput(agent,plat,f){
+  const id=`pf_${agent}_${plat}_${f.key}`;
+  const ph=f.set?(f.secret?(f.preview||'已保存，留空不改'):(f.preview||'已保存，可改')):(f.placeholder||'');
+  return `<label class="k" for="${id}">${esc(f.label)}${f.required?' *':''}</label><input id="${id}" ${f.secret?'type="password" autocomplete="new-password"':''} placeholder="${esc(ph)}" data-key="${esc(f.key)}">`;
+}
+function togglePlatForm(agent,plat){
+  const k=platKey(agent,plat);
+  if(OPEN_PLATS.has(k)) OPEN_PLATS.delete(k); else {OPEN_PLATS.clear(); OPEN_PLATS.add(k)}
+  renderChatPlatforms(CHAT_PLATFORMS);
+}
+function renderChatPlatforms(data){
+  const box=$('chatToolsBox'); if(!box)return;
+  const agents=data&&data.agents||[];
+  if(!agents.length){box.innerHTML='<p class="muted">没有扫到 agent</p>';return}
+  box.innerHTML=agents.map(a=>{
+    const plats=a.platforms||[];
+    const on=plats.filter(p=>p.configured).map(p=>p.label).join('、')||'还没有';
+    const chips=plats.map(p=>{
+      const open=OPEN_PLATS.has(platKey(a.id,p.id));
+      return `<button type="button" class="toolBtn ${p.configured?'on':'off'}${open?' active':''}" onclick="togglePlatForm('${esc(a.id)}','${esc(p.id)}')">${esc(p.label)}${p.configured?' · 已接':' · 未接'}</button>`;
+    }).join('');
+    const openPlat=plats.find(p=>OPEN_PLATS.has(platKey(a.id,p.id)));
+    let form='';
+    if(openPlat){
+      const fields=(openPlat.fields||[]).map(f=>fieldInput(a.id,openPlat.id,f)).join('');
+      form=`<div class="provider" style="margin-top:10px"><div class="phead"><div><div class="pname">${esc(openPlat.label)}</div><div class="pmeta">${openPlat.configured?'已配置，可改字段':'未配置，填必填项后添加'}</div></div><div class="actions"><button class="small" type="button" onclick="togglePlatForm('${esc(a.id)}','${esc(openPlat.id)}')">收起</button><button class="small primary" type="button" onclick="saveChatPlatform('${esc(a.id)}','${esc(openPlat.id)}')">保存</button></div></div><div class="form" id="platForm_${a.id}_${openPlat.id}">${fields}</div></div>`;
+    }
+    return `<div class="provider"><div class="phead"><div><div class="pname">${esc(a.profile||a.id)}</div><div class="pmeta">已接：${esc(on)} · 点平台展开添加/修改</div></div></div><div class="toolGrid">${chips}</div>${form}</div>`;
+  }).join('');
+}
+async function loadChatPlatforms(){
+  const box=$('chatToolsBox');
+  if(box && !box.dataset.loaded) box.innerHTML='<p class="muted">读取中...</p>';
+  try{
+    const r=await api('/chat-platforms');
+    CHAT_PLATFORMS=r;
+    if(box) box.dataset.loaded='1';
+    renderChatPlatforms(r);
+  }catch(e){
+    if(box) box.innerHTML='<p class="err">'+esc(e.message)+'</p>';
+  }
+}
+async function saveChatPlatform(agent,platform){
+  const form=document.getElementById('platForm_'+agent+'_'+platform);
+  if(!form)return;
+  const values={};
+  form.querySelectorAll('input[data-key]').forEach(el=>{
+    const v=String(el.value||'').trim();
+    if(v) values[el.dataset.key]=v;
+  });
+  try{
+    await api('/chat-platforms',{method:'POST',body:JSON.stringify({agent,platform,values})});
+    toast('已保存 '+platform+' · '+agentLabel(agent)+'，重启 Gateway 后进线');
+    await loadChatPlatforms();
+  }catch(e){toast(e.message)}
+}
+async function loadState(){try{const s=await api('/state');STATE=s;showApp();renderCurrent(s.current);renderImageGen();renderProviders(s.providers);renderCommands(s.commands);renderTestTargets(s.providers);renderRestartOptions();initPanelPage();serviceStatus()}catch(e){showLogin();toast(e.message)}}
+async function serviceStatus(){const box=$('serviceStatus'); if(!box)return; const chip=(name,st)=>{const on=/active|ok|running|up/i.test(String(st||'')); return `<span class="statusChip"><span class="dot ${on?'on':'off'}"></span><span class="name">${esc(name)}</span><span class="st">${esc(st||'unknown')}</span></span>`}; try{const s=await api('/service-status'); const list=s.statuses||[]; window.AGENT_STATUS={}; list.forEach(x=>{window.AGENT_STATUS[x.profile||x.agent]=x.status}); box.innerHTML=list.length?list.map(x=>chip(x.profile||x.agent,x.status)).join(''):chip('Gateway',s.status||'unknown'); if(STATE) renderCurrent(STATE.current)}catch(e){box.innerHTML=chip('Gateway','状态未知')}}
+async function addProvider(){try{const body={name:$('addName').value,base_url:$('addUrl').value,api_key:$('addKey').value,api_mode:$('addMode').value,model:$('addModel').value,models:$('addModels').value};const r=await api('/providers',{method:'POST',body:JSON.stringify(body)});STATE=r.state;renderCurrent(STATE.current);renderProviders(STATE.providers);renderCommands(STATE.commands);renderTestTargets(STATE.providers);toast('已添加中转站')}catch(e){toast(e.message)}}
+async function fetchModelsForAdd(){
+  const btns=[...document.querySelectorAll('button')];
+  const btn=btns.find(b=>b.textContent.trim()==='一键获取模型');
+  const oldText=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='获取中...'}
+  try{
+    const r=await api('/fetch-models',{method:'POST',body:JSON.stringify({base_url:$('addUrl').value,api_key:$('addKey').value,api_mode:$('addMode').value})});
+    const models=r.models||[];
+    if(!models.length) throw new Error('没有获取到模型');
+    $('addModel').value=$('addModel').value||models[0];
+    $('addModels').value=models.filter(m=>m!==$('addModel').value).join('\n');
+    toast('已获取 '+models.length+' 个模型');
+  }catch(e){toast(e.message)}
+  finally{if(btn){btn.disabled=false;btn.textContent=oldText||'一键获取模型'}}
+}
+async function deleteProvider(id){if(!confirm('确定删除这个中转站？'))return;try{const r=await api('/providers/'+id,{method:'DELETE'});STATE=r.state;renderProviders(STATE.providers);renderCommands(STATE.commands);renderTestTargets(STATE.providers);toast('已删除')}catch(e){toast(e.message)}}
+async function refreshProviderModels(id){
+  const btn=$('refreshModels_'+id);
+  const old=btn?btn.textContent:'';
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn.textContent='获取中...'}
+  try{
+    const r=await api(`/providers/${id}/refresh-models`,{method:'POST',body:JSON.stringify({})});
+    STATE=r.state;
+    EXPANDED_PROVIDERS.add(Number(id));
+    renderProviders(STATE.providers);
+    renderCommands(STATE.commands);
+    renderTestTargets(STATE.providers);
+    const n=(r.added!=null)?r.added:((STATE.providers||[]).find(p=>Number(p.id)===Number(id))?.models||[]).length;
+    toast('已重新获取 '+n+' 个模型'+(r.kept_default?'（保留原默认 '+r.kept_default+'）':''));
+  }catch(e){toast(e.message)}
+  finally{const b=$('refreshModels_'+id);if(b){b.disabled=false;b.textContent=old||'重新获取模型'}}
+}
+async function addModel(id){try{const v=$('model_'+id).value;const r=await api(`/providers/${id}/models`,{method:'POST',body:JSON.stringify({model:v})});STATE=r.state;renderProviders(STATE.providers);renderCommands(STATE.commands);renderTestTargets(STATE.providers);toast('已添加模型')}catch(e){toast(e.message)}}
+async function deleteModel(id,m){if(!confirm('确定删除这个模型？'))return;try{const r=await api(`/providers/${id}/models/${m}`,{method:'DELETE'});STATE=r.state;renderProviders(STATE.providers);renderCommands(STATE.commands);renderTestTargets(STATE.providers);toast('已删除模型')}catch(e){toast(e.message)}}
+async function switchModel(id,m,agent='default'){
+  const p=(STATE.providers||[]).find(x=>Number(x.id)===Number(id));
+  const mode=apiModeLabel(p?.api_mode);
+  const extra=p?.api_mode==='anthropic_messages'?'\n\n注意：这是 Claude API 格式，不是 OpenAI。切给 agent 前建议先点“测试”，并且 unlimited.surf 这类站可能轻量测试通过但 Hermes 实战被拦。':'';
+  const msg=(agent==='both'?`确定把两个 Agent 都切换到 ${m}？`:`确定把 ${agentLabel(agent)} 切换到 ${m}？`)+`\n接口格式：${mode}`+extra;
+  if(!confirm(msg)) return;
+  try{const r=await api('/switch',{method:'POST',body:JSON.stringify({providerIndex:id,model:m,agent})});STATE=r.state;renderCurrent(STATE.current);renderProviders(STATE.providers);toast('已切换 '+agentLabel(agent)+'：'+m)}catch(e){toast(e.message)}
+}
+async function rebuildCommands(){try{const r=await api('/rebuild-commands',{method:'POST'});STATE=r.state;renderCommands(STATE.commands);toast('TG 快捷命令已重建')}catch(e){toast(e.message)}}
+async function runTest(){
+  const target=$('testTarget').value;
+  if(target.startsWith('provider-all:')){await testProviderAllModels(Number(target.split(':')[1]), true);return;}
+  const body={message:$('testMessage').value};
+  let label='选定范围';
+  if(target==='all'){body.all=true;label='全部中转站（每站默认模型）'}
+  else if(target==='current'){body.providerIndex='current';label='当前使用'}
+  else if(target.startsWith('agent:')){body.agent=target.split(':')[1];label=agentLabel(body.agent)+' 当前可用'}
+  else if(target.startsWith('p:')){const parts=target.split(':');body.providerIndex=Number(parts[1]);body.model=decodeURIComponent(parts.slice(2).join(':'));label=body.providerIndex+'号 / '+body.model;}
+  $('testResults').innerHTML='<div class="muted">测试中，请稍等...</div>';
+  appendTestLog('开始检测：'+label,'run');
+  try{
+    const r=await api('/test',{method:'POST',body:JSON.stringify(body)});
+    const results=r.results||[];
+    renderTestResults(results);
+    results.forEach(one=>appendTestLog(summarizeResult(one),resultLogType(one)));
+    appendTestLog('检测完成：共 '+results.length+' 项','ok');
+    toast('测试完成')
+  }catch(e){
+    $('testResults').innerHTML='<div class="err">'+esc(e.message)+'</div>';
+    appendTestLog('检测失败：'+e.message,'bad');
+    toast(e.message)
+  }
+}
+async function testAgentCurrent(agent){
+  const box=$('agent_test_'+agent);
+  const label=agentLabel(agent)+' 当前模型';
+  appendTestLog('开始检测：'+label,'run');
+  if(box) box.innerHTML='<div class="muted" style="margin-top:8px">正在测试当前模型...</div>';
+  try{
+    const r=await api('/test',{method:'POST',body:JSON.stringify({agent,message:$('testMessage')?.value||'你好，请用一句话回复：测试成功'})});
+    const html=(r.results||[]).map(oneResultHtml).join('') || '<div class="err">没有返回结果</div>';
+    if(box) box.innerHTML='<div class="results">'+html+'</div>';
+    (r.results||[]).forEach(one=>appendTestLog(summarizeResult(one),resultLogType(one)));
+    appendTestLog('检测完成：'+label,'ok');
+    toast('测试完成：'+agentLabel(agent));
+  }catch(e){
+    if(box) box.innerHTML='<div class="err" style="margin-top:8px">'+esc(e.message)+'</div>';
+    appendTestLog('检测失败：'+label+' · '+e.message,'bad');
+    toast(e.message);
+  }
+}
+async function testProviderAllModels(providerIndex, fromTop=false){
+  const p=(STATE.providers||[]).find(x=>Number(x.id)===Number(providerIndex));
+  if(!p){toast('中转站不存在');appendTestLog('中转站不存在：'+providerIndex,'bad');return}
+  if(!fromTop && !EXPANDED_PROVIDERS.has(Number(providerIndex))){EXPANDED_PROVIDERS.add(Number(providerIndex));renderProviders(STATE.providers)}
+  if(!fromTop) setTimeout(()=>document.getElementById('provider_'+providerIndex)?.scrollIntoView({behavior:'smooth',block:'start'}),60);
+  const models=p.models||[];
+  if(fromTop) $('testResults').innerHTML='<div class="muted">正在逐个测试 '+esc(p.name)+' 的 '+models.length+' 个模型...</div>';
+  appendTestLog('开始批量检测：'+p.id+'号 '+p.name+'，共 '+models.length+' 个模型','run');
+  models.forEach(m=>{const box=$(resultId(providerIndex,m)); if(box) box.innerHTML='<div class="muted" style="margin-top:10px">等待批量测试...</div>';});
+  const results=[];
+  let ok=0, bad=0;
+  for(let i=0;i<models.length;i++){
+    const m=models[i];
+    const box=$(resultId(providerIndex,m));
+    appendTestLog('['+(i+1)+'/'+models.length+'] 正在检测 '+m,'run');
+    if(box) box.innerHTML='<div class="muted" style="margin-top:10px">正在测试 '+esc(m)+' ...</div>';
+    try{
+      const r=await api('/test',{method:'POST',body:JSON.stringify({providerIndex,model:m,message:$('testMessage')?.value||'你好，请用一句话回复：测试成功'})});
+      const one=(r.results||[])[0];
+      if(one){results.push(one); one.ok?ok++:bad++; appendTestLog(summarizeResult(one),resultLogType(one));}
+      else{bad++; appendTestLog(p.id+'号 / '+m+'：没有返回结果','bad')}
+      if(box) box.innerHTML='<div class="results">'+((r.results||[]).map(oneResultHtml).join('')||'<div class="err">没有返回结果</div>')+'</div>';
+    }catch(e){
+      bad++;
+      appendTestLog(p.id+'号 / '+m+'：请求失败 · '+e.message,'bad');
+      if(box) box.innerHTML='<div class="err" style="margin-top:10px">'+esc(e.message)+'</div>';
+    }
+    if(fromTop) renderTestResults(results);
+  }
+  appendTestLog('批量检测完成：'+p.name+' · 可用 '+ok+' / 失败 '+bad+' / 总计 '+models.length, bad?'warn':'ok');
+  toast('已测试 '+models.length+' 个模型');
+}
+async function testOneModel(providerIndex, model){
+  const box=$(resultId(providerIndex, model));
+  appendTestLog('开始检测：'+providerIndex+'号 / '+model,'run');
+  if(box) box.innerHTML='<div class="muted" style="margin-top:10px">正在测试 '+esc(model)+' ...</div>';
+  try{
+    const r=await api('/test',{method:'POST',body:JSON.stringify({providerIndex,model,message:$('testMessage').value||'你好，请用一句话回复：测试成功'})});
+    const html=(r.results||[]).map(oneResultHtml).join('') || '<div class="err">没有返回结果</div>';
+    if(box) box.innerHTML='<div class="results">'+html+'</div>';
+    (r.results||[]).forEach(one=>appendTestLog(summarizeResult(one),resultLogType(one)));
+    appendTestLog('检测完成：'+providerIndex+'号 / '+model,'ok');
+    toast('测试完成：'+model);
+  }catch(e){
+    if(box) box.innerHTML='<div class="err" style="margin-top:10px">'+esc(e.message)+'</div>';
+    appendTestLog('检测失败：'+providerIndex+'号 / '+model+' · '+e.message,'bad');
+    toast(e.message);
+  }
+}
+function oneResultHtml(r){
+  const good=r.ok;
+  const detail=good?('<div class="reply">'+esc(r.text)+'</div>'):('<div class="err">'+esc(r.error|| (r.empty?'HTTP 成功但返回空内容':'测试失败'))+'</div>');
+  return '<div class="result '+(good?'ok':'bad')+'"><div class="rhead"><div><b>'+esc(r.providerIndex)+'号：'+esc(r.provider_name)+'</b><div class="pmeta">'+esc(r.model)+' · '+esc(r.base_url)+' · '+esc(r.api_mode)+'</div></div><span class="pill '+(good?'ok':'bad')+'">'+(good?'可用':'不可用/空回复')+' · HTTP '+esc(r.http_status)+' · '+esc(r.latency_ms)+'ms</span></div>'+detail+'</div>';
+}
+function renderTestResults(rs){
+  $('testResults').innerHTML=rs.map(oneResultHtml).join('') || '<p class="muted">没有结果</p>';
+}
+function fileToBase64(file){return new Promise((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(String(fr.result).split(',')[1]||'');fr.onerror=()=>reject(fr.error||new Error('读取文件失败'));fr.readAsDataURL(file);})}
+async function runAsr(){
+  const f=$('asrFile').files[0];
+  if(!f){toast('请先选择 mp3/wav 文件');return}
+  $('asrResult').innerHTML='<div class="muted">识别中，请稍等...</div>';
+  try{const audioData=await fileToBase64(f);const r=await api('/mimo/asr',{method:'POST',body:JSON.stringify({audioData,mime:f.type||(/\.wav$/i.test(f.name)?'audio/wav':'audio/mpeg'),language:$('asrLang').value})});$('asrResult').innerHTML='<div class="result '+(r.ok?'ok':'bad')+'"><div class="rhead"><b>ASR 结果</b><span class="pill '+(r.ok?'ok':'bad')+'">HTTP '+esc(r.http_status)+' · '+esc(r.latency_ms)+'ms</span></div>'+(r.ok?'<div class="reply">'+esc(r.text)+'</div>':'<div class="err">'+esc(r.error||'识别失败')+'</div>')+'</div>';toast('识别完成')}catch(e){$('asrResult').innerHTML='<div class="err">'+esc(e.message)+'</div>';toast(e.message)}
+}
+async function runTts(){
+  $('ttsResult').innerHTML='<div class="muted">生成中，请稍等...</div>';
+  const body={model:$('ttsModel').value,voice:$('ttsVoice').value,format:$('ttsFormat').value,style:$('ttsStyle').value,text:$('ttsText').value};
+  try{const r=await api('/mimo/tts',{method:'POST',body:JSON.stringify(body)});if(r.ok){const ext=r.format||'wav';$('ttsResult').innerHTML='<div class="result ok"><div class="rhead"><b>TTS 生成成功</b><span class="pill ok">HTTP '+esc(r.http_status)+' · '+esc(r.latency_ms)+'ms</span></div><audio controls src="'+r.audioDataUrl+'"></audio><div class="actions"><a download="mimo-tts.'+ext+'" href="'+r.audioDataUrl+'"><button>下载音频</button></a></div></div>'}else{$('ttsResult').innerHTML='<div class="result bad"><div class="err">'+esc(r.error||'生成失败')+'</div></div>'}toast('生成完成')}catch(e){$('ttsResult').innerHTML='<div class="err">'+esc(e.message)+'</div>';toast(e.message)}
+}
+async function restartGateway(){const agent=$('restartAgent')?.value||'default';if(!confirm('确定重启 '+agentLabel(agent)+' 的 Gateway？会中断对应 agent 当前正在运行的任务。'))return;try{toast('正在重启 '+agentLabel(agent)+' Gateway...');await api('/restart-gateway',{method:'POST',body:JSON.stringify({agent})});toast(agentLabel(agent)+' Gateway 已重启');await serviceStatus()}catch(e){toast('重启请求已发出/可能超时，请稍后刷新检查')}}
+loadState();
+</script>
+</body>
+</html>
+
+
