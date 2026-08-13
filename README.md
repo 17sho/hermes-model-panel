@@ -58,6 +58,16 @@ sudo bash install.sh
 4. Write `/etc/hermes-model-panel.env` if absent (does not overwrite)
 5. Install and start `hermes-model-panel.service`
 6. Probe `http://127.0.0.1:3010/`
+7. Install the `hermes-model-panel` command
+
+Open the panel:
+
+```bash
+hermes-model-panel          # print listen address + how to open
+```
+
+Default bind is **127.0.0.1:3010** — only that machine’s browser works (`http://127.0.0.1:3010/`).  
+Other devices using `http://服务器IP:3010/` will fail until you set `HOST=0.0.0.0` in `/etc/hermes-model-panel.env` and restart the unit. Then use `http://那台机器的IP:3010/`. Put a reverse proxy in front for a domain.
 
 Then in the panel:
 

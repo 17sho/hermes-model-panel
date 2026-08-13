@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# 打印面板怎么打开。不启动服务、不改配置。
+set -euo pipefail
+
+ENV_FILE="${ENV_FILE:-/etc/hermes-model-panel.env}"
+UNIT="${UNIT:-hermes-model-panel.service}"
+
+PORT=3010
+HOST=127.0.0.1
+if [[ -f "$ENV_FILE" ]]; then
+  # shellcheck disable=SC1090
+  set -a
+  # only take PORT/HOST
+  PORT="$(awk -F= '/^PORT=/{print $2; exit}' "$ENV_FILE" | tr -d '[:space:]')"
+  HOST="$(awk -F= '/^HOST=/{print $2; exit}' "$ENV_FILE" | tr -d '[:space:]')"
+  set +a
+  PORT="${PORT:-3010}"
+  HOST="${HOST:-127.0.0.1}"
+fi
+
+active="unknown"
+if command -v systemctl >/dev/null 2>&1; then
+  if systemctl is-active --quiet "$UNIT" 2>/dev/null; then
+    active="running"
+  else
+    active="stopped"
+  fi
+fi
+
+lan_ips() {
+  hostname -I 2>/dev/null | tr ' ' '\n' | awk '
+    NF && $1 !~ /^127\./ && $1 !~ /:/ && $1 !~ /^172\.(1[6-9]|2[0-9]|3[0-1])\./
+  ' || true
+}
+
+echo "Hermes 模型面板"
+echo "服务: $active"
+echo "监听: ${HOST}:${PORT}"
+echo
+echo "本机浏览器打开:"
+echo "  http://127.0.0.1:${PORT}/"
+
+if [[ "$HOST" == "127.0.0.1" || "$HOST" == "localhost" ]]; then
+  echo
+  echo "现在只绑本机，局域网/公网 IP:${PORT} 打不开。"
+  echo "要在别的电脑用这台机器的 IP 访问，改 ${ENV_FILE}："
+  echo "  HOST=0.0.0.0"
+  echo "然后: sudo systemctl restart hermes-model-panel"
+  echo "防火墙放行端口后再打开:"
+  while read -r ip; do
+    [[ -n "$ip" ]] && echo "  http://${ip}:${PORT}/"
+  done < <(lan_ips)
+  echo "公网直出务必 AUTH_DISABLED=0 并设 ADMIN_PASSWORD。"
+else
+  echo
+  echo "已对 ${HOST} 监听，可用本机 IP:${PORT}："
+  while read -r ip; do
+    [[ -n "$ip" ]] && echo "  http://${ip}:${PORT}/"
+  done < <(lan_ips)
+fi
+
+echo
+echo "常用:"
+echo "  sudo systemctl status hermes-model-panel"
+echo "  sudo systemctl restart hermes-model-panel"
+echo "  hermes-model-panel          # 再看一遍地址"

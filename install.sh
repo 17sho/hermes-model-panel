@@ -126,14 +126,32 @@ fi
 [[ "$code" == "200" ]] || die "本机探测失败 HTTP $code。看 journalctl -u hermes-model-panel"
 ok "本机 HTTP $code  http://127.0.0.1:${PORT}/"
 
+install -m 0755 "$SRC/scripts/hermes-model-panel" /usr/local/bin/hermes-model-panel
+ok "已安装命令: hermes-model-panel"
+
+LAN_HINT=""
+if [[ "$HOST" == "127.0.0.1" || "$HOST" == "localhost" ]]; then
+  LAN_HINT="默认只听 127.0.0.1，别的电脑用 IP:${PORT} 打不开。
+要局域网访问：改 ${ENV_OUT} 里 HOST=0.0.0.0 ，再 sudo systemctl restart hermes-model-panel
+然后浏览器打开 http://这台机器的IP:${PORT}/
+公网直出务必 AUTH_DISABLED=0 并设 ADMIN_PASSWORD。"
+else
+  LAN_HINT="已听 ${HOST}:${PORT}，浏览器打开 http://这台机器的IP:${PORT}/"
+fi
+
 cat <<EOF
 
-装好了。接下来在面板里补齐就能聊（脚本不会替你填 Key）：
+装好了。打开面板：
 
-1. 打开面板（本机 ${HOST}:${PORT}；有反代就走你的域名）
-2. 「添加中转站」填地址 + API Key → 「获取」模型 → 切给 agent
-3. 「聊天平台」给对应 agent 填 Bot Token / 微信等
-4. 设置里重启对应 Gateway，聊天里 /reset
+  本机:  http://127.0.0.1:${PORT}/
+  再看一遍地址:  hermes-model-panel
+
+${LAN_HINT}
+
+接下来在面板里补齐就能聊（脚本不会替你填 Key）：
+1. 「添加中转站」填地址 + API Key → 「获取」模型 → 切给 agent
+2. 「聊天平台」给对应 agent 填 Bot Token / 微信等
+3. 设置里重启对应 Gateway，聊天里 /reset
 
 做不到的：没装 Hermes、没 Bot、没有任何中转 Key，只跑本脚本就能开聊。
 也不在这里创建新 agent / 写 systemd gateway。

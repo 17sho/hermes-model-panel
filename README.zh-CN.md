@@ -58,6 +58,16 @@ sudo bash install.sh
 4. 没有才写 `/etc/hermes-model-panel.env`（不覆盖已有）
 5. 安装并启动 `hermes-model-panel.service`
 6. 探测 `http://127.0.0.1:3010/`
+7. 安装命令 `hermes-model-panel`
+
+打开面板：
+
+```bash
+hermes-model-panel          # 打印监听地址和怎么开
+```
+
+默认只绑 **127.0.0.1:3010**，本机浏览器打开 `http://127.0.0.1:3010/`。  
+别的设备用 `http://服务器IP:3010/` **打不开**。要局域网访问：在 `/etc/hermes-model-panel.env` 设 `HOST=0.0.0.0`，再 `sudo systemctl restart hermes-model-panel`，然后用 `http://那台机器的IP:3010/`。有域名就走反代。
 
 然后在面板里：
 
