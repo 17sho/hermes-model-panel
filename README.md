@@ -16,6 +16,12 @@
 <p align="center">
   <img src="docs/images/panel-platforms.png" alt="聊天平台" width="720">
 </p>
+<p align="center">
+  <img src="docs/images/panel-tools.png" alt="Agent 工具" width="720">
+</p>
+<p align="center">
+  <img src="docs/images/panel-skills.png" alt="Skills" width="720">
+</p>
 
 ## 能干什么
 

@@ -16,6 +16,12 @@ A small dark-theme web panel for an **already-installed** [Hermes Agent](https:/
 <p align="center">
   <img src="docs/images/panel-platforms.png" alt="Chat platforms" width="720">
 </p>
+<p align="center">
+  <img src="docs/images/panel-tools.png" alt="Agent tools" width="720">
+</p>
+<p align="center">
+  <img src="docs/images/panel-skills.png" alt="Skills" width="720">
+</p>
 
 ## What you get
 
