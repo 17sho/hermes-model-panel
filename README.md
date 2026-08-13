@@ -75,7 +75,91 @@ hermes-model-panel          # 打印监听地址和怎么开
 2. **聊天平台** → 给对应 agent 填 Token
 3. **设置** → 重启对应 Gateway → 聊天里 `/reset`
 
-公网直出、没有反代：在 env 里设 `AUTH_DISABLED=0` 和 `ADMIN_PASSWORD`。脚本不打印密码。
+## 怎么给外部访问（小白按这个做）
+
+装完**默认只能本机开**。手机、另一台电脑、公网 IP **打不开**，这是正常的，不是装坏了。
+
+### 1）先确认本机已经起来
+
+在装面板的那台机器上：
+
+```bash
+hermes-model-panel
+```
+
+看到「本机浏览器打开 http://127.0.0.1:3010/」就对了。先在这台机器自己的浏览器试一下。
+
+### 2）改成局域网 / IP:端口 能打开
+
+还是在那台机器上：
+
+```bash
+sudo nano /etc/hermes-model-panel.env
+```
+
+找到（没有就自己加一行）：
+
+```
+HOST=127.0.0.1
+```
+
+改成：
+
+```
+HOST=0.0.0.0
+```
+
+保存退出，然后：
+
+```bash
+sudo systemctl restart hermes-model-panel
+hermes-model-panel
+```
+
+命令会打印类似 `http://192.168.x.x:3010/` 的地址。手机和电脑要跟服务器在**同一个 Wi-Fi / 内网**，浏览器打开那一行。
+
+云服务器还要在商家控制台给 **3010/tcp** 加安全组 / 防火墙放行，例如：
+
+```bash
+sudo ufw allow 3010/tcp
+sudo ufw reload
+```
+
+（没装 ufw 就按你用的防火墙来，阿里云/腾讯云还要在网页安全组里放行。）
+
+### 3）公网用 IP:3010 直开（不推荐，但能用）
+
+上面改完 `HOST=0.0.0.0` 并且安全组放行后，外网浏览器打开：
+
+`http://你的公网IP:3010/`
+
+这时面板是裸奔的。**务必**再改同一个 env：
+
+```
+AUTH_DISABLED=0
+ADMIN_PASSWORD=自己设一个够长的密码
+```
+
+再执行：
+
+```bash
+sudo systemctl restart hermes-model-panel
+```
+
+脚本**不会**在屏幕上打印密码。
+
+### 4）有域名（推荐）
+
+不要把 3010 直接暴露到公网。用 Caddy / Nginx 反代到 `127.0.0.1:3010`，浏览器走 `https://你的域名`。仓库里有一份示例：`caddy/model.example.com.caddy`。这时 `HOST` 可以继续留 `127.0.0.1`。
+
+### 打不开时先看这几条
+
+| 现象 | 多半是 |
+| --- | --- |
+| 只有本机能开，别人 IP:3010 不行 | 还是 `HOST=127.0.0.1`，没改或没重启 |
+| 改了还是不行 | 云安全组 / ufw 没放行 3010 |
+| 能开网页但空白 / 连不上 | `sudo systemctl status hermes-model-panel` |
+| 公网谁都能进、没有登录 | 没设 `AUTH_DISABLED=0` |
 
 ## 手动跑
 

@@ -75,7 +75,79 @@ Then in the panel:
 2. **Chat platforms** → fill the token for that agent
 3. **Settings** → restart the matching Gateway → `/reset` in chat
 
-Public bind without a reverse proxy: set `AUTH_DISABLED=0` and `ADMIN_PASSWORD` in the env file. The script does not print the password.
+## External access (step by step)
+
+After install the panel is **localhost only**. Phones, other PCs, and the public IP will fail — that is expected.
+
+### 1) Confirm it is up on the machine
+
+```bash
+hermes-model-panel
+```
+
+Open `http://127.0.0.1:3010/` in a browser **on that same machine**.
+
+### 2) Allow LAN / `IP:port`
+
+```bash
+sudo nano /etc/hermes-model-panel.env
+```
+
+Change:
+
+```
+HOST=127.0.0.1
+```
+
+to:
+
+```
+HOST=0.0.0.0
+```
+
+Then:
+
+```bash
+sudo systemctl restart hermes-model-panel
+hermes-model-panel
+```
+
+Use the printed `http://LAN_IP:3010/` from another device on the same network.
+
+Cloud VM: also open **3010/tcp** in the provider security group / firewall, e.g.
+
+```bash
+sudo ufw allow 3010/tcp
+sudo ufw reload
+```
+
+### 3) Bare public `IP:3010` (works, not recommended)
+
+After `HOST=0.0.0.0` and a security-group hole, open `http://PUBLIC_IP:3010/`. Then **must** set in the same env:
+
+```
+AUTH_DISABLED=0
+ADMIN_PASSWORD=a-long-password-you-choose
+```
+
+```bash
+sudo systemctl restart hermes-model-panel
+```
+
+The installer never prints the password.
+
+### 4) Domain (recommended)
+
+Keep `HOST=127.0.0.1` and reverse-proxy with Caddy/Nginx to `127.0.0.1:3010`. Example: `caddy/model.example.com.caddy`.
+
+### If it does not open
+
+| Symptom | Likely cause |
+| --- | --- |
+| Only localhost works | Still `HOST=127.0.0.1`, or unit not restarted |
+| Still closed after the change | Security group / ufw blocking 3010 |
+| Service down | `sudo systemctl status hermes-model-panel` |
+| Anyone can enter with no login | `AUTH_DISABLED` still `1` |
 
 ## Manual run
 
