@@ -2,9 +2,32 @@
 
 [English](README.md)
 
-给**已经装好** [Hermes Agent](https://github.com/NousResearch/hermes-agent) 的机器用的小面板：加 OpenAI 兼容中转、按 agent 选模型、给对应 agent 接聊天平台（Telegram / 微信 / Discord 等）。
+[![License: MIT](https://img.shields.io/badge/License-MIT-6f8cff.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Hermes](https://img.shields.io/badge/requires-Hermes%20Agent-0e1016)](https://github.com/NousResearch/hermes-agent)
 
-**不是** Hermes 安装器。空机没装 Hermes、没 Node、没有任何 Key，clone 完也不能聊。
+给**已经装好** [Hermes Agent](https://github.com/NousResearch/hermes-agent) 的机器用的深色小面板：加 OpenAI 兼容中转、按 agent 选模型、给对应 agent 接聊天平台（Telegram / 微信 / Discord 等）。
+
+**不是** Hermes 安装器。clone + `install.sh` 只把面板跑起来。要聊天还得有 Hermes、中转 Key，接平台还要 Bot Token。
+
+<p align="center">
+  <img src="docs/images/panel-models.png" alt="当前模型" width="720">
+</p>
+<p align="center">
+  <img src="docs/images/panel-platforms.png" alt="聊天平台" width="720">
+</p>
+
+## 能干什么
+
+| 区块 | 作用 |
+| --- | --- |
+| 当前模型 | 列出扫到的每个 agent、当前模型和中转 |
+| 中转站 | 加 OpenAI 兼容地址，拉模型，按 agent 切换 |
+| 生图模型 | 从同一批中转里选生图模型 |
+| 聊天平台 | 按 agent 填 Telegram / 微信 / Discord 等，密钥不回显 |
+| 设置 | 重启对应 Gateway，改完才进线 |
+
+agent 只在打开页面或点刷新时扫，不定时后台扫。
 
 ## 协议
 
@@ -58,8 +81,6 @@ node server.js
 Caddy 示例：`caddy/model.example.com.caddy`。
 
 ## 怎么扫 agent
-
-打开页面时扫本机：
 
 - `~/.hermes/config.yaml` → 1 个默认 agent
 - `~/.hermes/profiles/<名>/config.yaml` → 再加一个

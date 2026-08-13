@@ -2,9 +2,32 @@
 
 [中文说明](README.zh-CN.md)
 
-A small web panel for an **already-installed** [Hermes Agent](https://github.com/NousResearch/hermes-agent). Add OpenAI-compatible relays, pick models per agent, and attach chat platforms (Telegram / WeChat / Discord / …).
+[![License: MIT](https://img.shields.io/badge/License-MIT-6f8cff.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Hermes](https://img.shields.io/badge/requires-Hermes%20Agent-0e1016)](https://github.com/NousResearch/hermes-agent)
 
-This is **not** a Hermes installer. An empty machine with no Hermes, no Node, and no API keys cannot chat after clone.
+A small dark-theme web panel for an **already-installed** [Hermes Agent](https://github.com/NousResearch/hermes-agent). Add OpenAI-compatible relays, pick models per agent, and attach chat platforms (Telegram / WeChat / Discord / …).
+
+**Not** a Hermes installer. Clone + `install.sh` only starts the panel. Chat still needs Hermes, a relay API key, and (for messaging) a bot token.
+
+<p align="center">
+  <img src="docs/images/panel-models.png" alt="Current models" width="720">
+</p>
+<p align="center">
+  <img src="docs/images/panel-platforms.png" alt="Chat platforms" width="720">
+</p>
+
+## What you get
+
+| Area | What it does |
+| --- | --- |
+| Current models | Lists every scanned agent, current model + relay |
+| Relays | Add OpenAI-compatible endpoints, fetch models, assign per agent |
+| Image models | Pick image generation models from the same relays |
+| Chat platforms | Per-agent Telegram / WeChat / Discord / … tokens (never echoed) |
+| Settings | Restart the matching Gateway so changes go live |
+
+Agents are discovered when you open or refresh the page — not on a timer.
 
 ## License
 
@@ -58,8 +81,6 @@ Useful variables: `PORT`, `HOST`, `HERMES_CONFIG`, `HERMES_HOME`, `AUTH_DISABLED
 Caddy example: `caddy/model.example.com.caddy`.
 
 ## What it scans
-
-Agents are discovered at request time:
 
 - `~/.hermes/config.yaml` → one default agent
 - each `~/.hermes/profiles/<name>/config.yaml` → another agent
