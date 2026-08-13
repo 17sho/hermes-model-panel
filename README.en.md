@@ -24,8 +24,9 @@ A small dark-theme web panel for an **already-installed** [Hermes Agent](https:/
 | Current models | Lists every scanned agent, current model + relay |
 | Relays | Add OpenAI-compatible endpoints, fetch models, assign per agent |
 | Image models | Pick image generation models from the same relays |
-| Chat platforms | Per-agent Telegram / WeChat / Discord / … tokens (never echoed) |
-| Settings | Restart the matching Gateway so changes go live |
+| Chat platforms | Per-agent Telegram / WeChat / Discord / … tokens (never echoed); turn a platform off |
+| Work status | Dedicated page: busy / idle / stopped; start/stop/restart Gateway |
+| Settings | Change or toggle panel password; restart the matching Gateway |
 
 Agents are discovered when you open or refresh the page — not on a timer.
 

@@ -109,7 +109,7 @@ const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '';
 const TRUST_PROXY_AUTH = process.env.TRUST_PROXY_AUTH === '1';
 // 默认关闭本面板认证。公网直出请设 AUTH_DISABLED=0。
 // 如需恢复密码保护，可在环境变量里设置 AUTH_DISABLED=0 并重启服务。
-const AUTH_DISABLED = process.env.AUTH_DISABLED !== '0';
+let AUTH_DISABLED = process.env.AUTH_DISABLED !== '0';
 
 if (!AUTH_DISABLED && !ADMIN_PASSWORD) {
   console.error('ADMIN_PASSWORD is required when AUTH_DISABLED=0');
@@ -127,8 +127,7 @@ function safeEqual(a, b) {
 }
 
 async function updateEnvKey(file, key, value) {
-  if (!value || String(value).length < 8) throw new Error('新密码至少 8 位');
-  if (/[\r\n]/.test(String(value))) throw new Error('新密码不能包含换行');
+  if (/[\r\n]/.test(String(value))) throw new Error('值不能包含换行');
   let lines = [];
   try {
     lines = (await fs.readFile(file, 'utf8')).split(/\r?\n/).filter((_, i, arr) => i < arr.length - 1 || arr[i] !== '');
@@ -147,6 +146,10 @@ async function updateEnvKey(file, key, value) {
   await fs.writeFile(`${file}.tmp`, `${lines.join('\n')}\n`, { mode: 0o600 });
   await fs.rename(`${file}.tmp`, file);
   await fs.chmod(file, 0o600);
+}
+
+function authPublicStatus() {
+  return { ok: true, password_enabled: !AUTH_DISABLED, password_set: Boolean(ADMIN_PASSWORD) };
 }
 
 function sign(value) {
@@ -211,6 +214,117 @@ function resolveAgentTargets(targetAgent = 'default') {
   if (key === 'all' || key === 'both') return agents;
   return [getAgent(key)];
 }
+
+
+const RESERVED_PROFILE_NAMES = new Set(['default', 'agent1', 'root', 'system']);
+
+function normalizeProfileName(raw) {
+  const name = String(raw || '').trim().toLowerCase();
+  if (!/^[a-z][a-z0-9]{0,23}$/.test(name)) {
+    throw new Error('名称只能用小写字母开头，后面跟字母或数字，最长 24 位');
+  }
+  if (RESERVED_PROFILE_NAMES.has(name)) throw new Error('这个名字留给默认 agent 了');
+  return name;
+}
+
+function gatewayUnitText(name) {
+  const home = path.join(PROFILES_DIR, name);
+  const hermesPython = process.env.HERMES_PYTHON || '/usr/local/lib/hermes-agent/venv/bin/python';
+  const pathExtra = process.env.HERMES_PATH_EXTRA || '/usr/local/lib/hermes-agent/venv/bin:/usr/local/lib/hermes-agent/node_modules/.bin';
+  const venv = process.env.HERMES_VENV || '/usr/local/lib/hermes-agent/venv';
+  const runUser = process.env.HERMES_RUN_USER || 'root';
+  return `[Unit]
+Description=Hermes Agent Gateway - ${name}
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=${runUser}
+Group=${runUser}
+ExecStart=${hermesPython} -m hermes_cli.main --profile ${name} gateway run --replace
+WorkingDirectory=${home}
+Environment="HOME=${process.env.HOME || '/root'}"
+Environment="HERMES_HOME=${home}"
+Environment="HERMES_PROFILE=${name}"
+Environment="PATH=${pathExtra}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="VIRTUAL_ENV=${venv}"
+Restart=always
+RestartSec=5
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=25
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+`;
+}
+
+async function createAgentProfile(rawName) {
+  const name = normalizeProfileName(rawName);
+  if (AGENTS().some((a) => a.profile === name || a.id === name)) {
+    throw new Error('已经有这个 agent 了');
+  }
+  const dest = path.join(PROFILES_DIR, name);
+  if (fssync.existsSync(dest)) throw new Error('目录已经存在');
+  const hermesBin = process.env.HERMES_BIN || 'hermes';
+  await execFileAsync(hermesBin, ['profile', 'create', name, '--no-alias'], { timeout: 60000, env: process.env });
+  const cfg = path.join(dest, 'config.yaml');
+  if (!fssync.existsSync(cfg)) {
+    if (!fssync.existsSync(HERMES_CONFIG)) throw new Error('profile 建完但没有 config.yaml，默认配置也不存在');
+    await fs.copyFile(HERMES_CONFIG, cfg);
+  }
+  const envPath = path.join(dest, '.env');
+  if (!fssync.existsSync(envPath)) await fs.writeFile(envPath, '', { mode: 0o600 });
+  const unitPath = `/etc/systemd/system/hermes-gateway-${name}.service`;
+  await fs.writeFile(unitPath, gatewayUnitText(name), { mode: 0o644 });
+  await execFileAsync('systemctl', ['daemon-reload'], { timeout: 30000 });
+  await execFileAsync('systemctl', ['enable', '--now', `hermes-gateway-${name}.service`], { timeout: 60000 });
+  return AGENTS().find((a) => a.profile === name);
+}
+
+function isDefaultAgent(agent) {
+  return !agent || agent.id === 'default' || agent.profile === 'agent1' || agent.service === 'hermes-gateway.service';
+}
+
+async function cloneAgentProfile(fromRaw, toRaw) {
+  const from = getAgent(fromRaw);
+  const name = normalizeProfileName(toRaw);
+  if (AGENTS().some((a) => a.profile === name || a.id === name)) throw new Error('已经有这个 agent 了');
+  const dest = path.join(PROFILES_DIR, name);
+  if (fssync.existsSync(dest)) throw new Error('目录已经存在');
+  const hermesBin = process.env.HERMES_BIN || 'hermes';
+  const args = ['profile', 'create', name, '--no-alias', '--clone-from', from.profile === 'agent1' ? 'default' : from.profile];
+  await execFileAsync(hermesBin, args, { timeout: 90000, env: process.env });
+  const cfg = path.join(dest, 'config.yaml');
+  if (!fssync.existsSync(cfg)) await fs.copyFile(from.config, cfg);
+  const envPath = path.join(dest, '.env');
+  await fs.writeFile(envPath, '', { mode: 0o600 });
+  const unitPath = `/etc/systemd/system/hermes-gateway-${name}.service`;
+  await fs.writeFile(unitPath, gatewayUnitText(name), { mode: 0o644 });
+  await execFileAsync('systemctl', ['daemon-reload'], { timeout: 30000 });
+  await execFileAsync('systemctl', ['enable', '--now', `hermes-gateway-${name}.service`], { timeout: 60000 });
+  return AGENTS().find((a) => a.profile === name);
+}
+
+async function deleteAgentProfile(rawId) {
+  const agent = getAgent(rawId);
+  if (isDefaultAgent(agent)) throw new Error('默认 agent 不能删');
+  const unit = agent.service;
+  try { await execFileAsync('systemctl', ['kill', '-s', 'SIGKILL', unit], { timeout: 15000 }); } catch (_) {}
+  try { await execFileAsync('systemctl', ['disable', '--now', unit], { timeout: 20000 }); } catch (_) {}
+  const unitPath = `/etc/systemd/system/${unit}`;
+  if (fssync.existsSync(unitPath)) await fs.unlink(unitPath);
+  try { await execFileAsync('systemctl', ['reset-failed', unit], { timeout: 15000 }); } catch (_) {}
+  await execFileAsync('systemctl', ['daemon-reload'], { timeout: 30000 });
+  const dest = path.join(PROFILES_DIR, agent.profile);
+  if (fssync.existsSync(dest)) await fs.rm(dest, { recursive: true, force: true });
+  return AGENTS();
+}
+
 
 async function loadConfigDoc(configPath = HERMES_CONFIG) {
   const raw = await fs.readFile(configPath, 'utf8');
@@ -790,14 +904,18 @@ async function testProvider(provider, model, message) {
 }
 
 router.post('/login', async (ctx) => {
+  if (AUTH_DISABLED) {
+    ctx.body = { ok: true, password_enabled: false };
+    return;
+  }
   const password = ctx.request.body?.password || '';
-  if (!safeEqual(password, ADMIN_PASSWORD)) {
+  if (!ADMIN_PASSWORD || !safeEqual(password, ADMIN_PASSWORD)) {
     ctx.status = 401;
     ctx.body = { ok: false, error: '密码错误' };
     return;
   }
   ctx.cookies.set(COOKIE_NAME, makeToken(), cookieOptions(ctx));
-  ctx.body = { ok: true };
+  ctx.body = { ok: true, password_enabled: true };
 });
 
 router.post('/logout', async (ctx) => {
@@ -805,10 +923,19 @@ router.post('/logout', async (ctx) => {
   ctx.body = { ok: true };
 });
 
+router.get('/auth-settings', async (ctx) => {
+  ctx.body = authPublicStatus();
+});
+
 router.post('/change-password', async (ctx) => {
   const oldPassword = String(ctx.request.body?.old_password || '');
   const newPassword = String(ctx.request.body?.new_password || '');
-  if (!safeEqual(oldPassword, ADMIN_PASSWORD)) {
+  if (!newPassword || newPassword.length < 8) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: '新密码至少 8 位' };
+    return;
+  }
+  if (!AUTH_DISABLED && ADMIN_PASSWORD && !safeEqual(oldPassword, ADMIN_PASSWORD)) {
     ctx.status = 403;
     ctx.body = { ok: false, error: '当前密码不正确' };
     return;
@@ -816,8 +943,33 @@ router.post('/change-password', async (ctx) => {
   try {
     await updateEnvKey(ENV_FILE, 'ADMIN_PASSWORD', newPassword);
     ADMIN_PASSWORD = newPassword;
-    ctx.cookies.set(COOKIE_NAME, '', cookieOptions(ctx, { maxAge: 0 }));
-    ctx.body = { ok: true };
+    if (!AUTH_DISABLED) ctx.cookies.set(COOKIE_NAME, makeToken(), cookieOptions(ctx));
+    ctx.body = authPublicStatus();
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message };
+  }
+});
+
+router.post('/auth-settings', async (ctx) => {
+  try {
+    const enabled = !!ctx.request.body?.password_enabled;
+    const newPassword = String(ctx.request.body?.new_password || '');
+    if (enabled) {
+      if (newPassword) {
+        if (newPassword.length < 8) throw new Error('新密码至少 8 位');
+        await updateEnvKey(ENV_FILE, 'ADMIN_PASSWORD', newPassword);
+        ADMIN_PASSWORD = newPassword;
+      }
+      if (!ADMIN_PASSWORD) throw new Error('先设一个至少 8 位的密码，才能打开密码保护');
+      await updateEnvKey(ENV_FILE, 'AUTH_DISABLED', '0');
+      AUTH_DISABLED = false;
+      ctx.cookies.set(COOKIE_NAME, makeToken(), cookieOptions(ctx));
+    } else {
+      await updateEnvKey(ENV_FILE, 'AUTH_DISABLED', '1');
+      AUTH_DISABLED = true;
+    }
+    ctx.body = authPublicStatus();
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message };
@@ -1354,26 +1506,72 @@ function readAgentPlatforms(agent) {
   });
 }
 
+function agentHomeDir(agent) {
+  if (!agent) throw new Error('agent 不存在');
+  if (agent.profile === 'agent1' || agent.id === 'default') return HERMES_HOME;
+  return path.join(PROFILES_DIR, agent.profile);
+}
+
+function readGatewayState(agent) {
+  const file = path.join(agentHomeDir(agent), 'gateway_state.json');
+  try {
+    const raw = JSON.parse(fssync.readFileSync(file, 'utf8'));
+    const platforms = {};
+    const src = raw && raw.platforms && typeof raw.platforms === 'object' ? raw.platforms : {};
+    for (const [name, info] of Object.entries(src)) {
+      platforms[name] = {
+        state: info && info.state ? String(info.state) : 'unknown',
+        error_code: info && info.error_code ? String(info.error_code) : '',
+        error_message: info && info.error_message ? String(info.error_message) : '',
+        updated_at: info && info.updated_at ? String(info.updated_at) : '',
+      };
+    }
+    return {
+      gateway_state: raw && raw.gateway_state ? String(raw.gateway_state) : '',
+      active_agents: Number(raw && raw.active_agents) || 0,
+      pid: raw && raw.pid ? Number(raw.pid) : 0,
+      updated_at: raw && raw.updated_at ? String(raw.updated_at) : '',
+      platforms,
+    };
+  } catch {
+    return { gateway_state: '', active_agents: 0, pid: 0, updated_at: '', platforms: {} };
+  }
+}
+
+async function systemctlAction(service, action) {
+  const { stdout, stderr } = await execFileAsync('systemctl', [action, service], { timeout: 25000 });
+  return { stdout, stderr };
+}
+
 function upsertEnvValues(envPath, updates) {
   let text = '';
   try { text = fssync.readFileSync(envPath, 'utf8'); } catch { text = ''; }
   const lines = text ? text.split(/\r?\n/) : [];
   const seen = new Set();
-  const next = lines.map((line) => {
+  const next = [];
+  for (const line of lines) {
     const m = line.match(/^(\s*(?:export\s+)?)([A-Za-z_][A-Za-z0-9_]*)(\s*=\s*)(.*)$/);
-    if (!m) return line;
+    if (!m) { next.push(line); continue; }
     const key = m[2];
-    if (!Object.prototype.hasOwnProperty.call(updates, key)) return line;
+    if (!Object.prototype.hasOwnProperty.call(updates, key)) { next.push(line); continue; }
     seen.add(key);
-    return `${m[1]}${key}=${updates[key]}`;
-  });
+    if (updates[key] === null) continue;
+    next.push(`${m[1]}${key}=${updates[key]}`);
+  }
   for (const [key, value] of Object.entries(updates)) {
-    if (!seen.has(key)) next.push(`${key}=${value}`);
+    if (seen.has(key) || value === null) continue;
+    next.push(`${key}=${value}`);
   }
   const out = next.join('\n').replace(/\n*$/, '\n');
   const dir = path.dirname(envPath);
   if (!fssync.existsSync(dir)) fssync.mkdirSync(dir, { recursive: true });
   fssync.writeFileSync(envPath, out, { mode: 0o600 });
+}
+
+function removeEnvKeys(envPath, keys) {
+  const updates = {};
+  for (const key of keys) updates[key] = null;
+  upsertEnvValues(envPath, updates);
 }
 
 router.get('/chat-platforms', async (ctx) => {
@@ -1421,11 +1619,49 @@ router.post('/chat-platforms', async (ctx) => {
   }
 });
 
+router.delete('/chat-platforms/:agent/:platform', async (ctx) => {
+  try {
+    const agent = getAgent(String(ctx.params.agent || '').trim());
+    const platformId = String(ctx.params.platform || '').trim();
+    if (!CHAT_PLATFORM_IDS.has(platformId)) throw new Error('不支持的平台');
+    const spec = CHAT_PLATFORMS.find((p) => p.id === platformId);
+    const keys = spec.fields.map((f) => f.key).filter((k) => CHAT_PLATFORM_KEYS.has(k));
+    if (!keys.length) throw new Error('没有可关掉的字段');
+    removeEnvKeys(agentEnvPath(agent), keys);
+    ctx.body = { ok: true, agent: agent.id, profile: agent.profile, platform: platformId, platforms: readAgentPlatforms(agent) };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message };
+  }
+});
+
 router.post('/rebuild-commands', async (ctx) => {
   const { cfg } = await loadConfigDoc();
   rebuildQuickCommands(cfg);
   const backup = await saveConfig(cfg);
   ctx.body = { ok: true, backup, state: await publicState(cfg) };
+});
+
+router.post('/agents', async (ctx) => {
+  try {
+    const name = ctx.request.body?.name || ctx.request.body?.profile;
+    const cloneFrom = ctx.request.body?.cloneFrom || ctx.request.body?.from;
+    const agent = cloneFrom ? await cloneAgentProfile(cloneFrom, name) : await createAgentProfile(name);
+    ctx.body = { ok: true, agent, agents: AGENTS() };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message, stdout: e.stdout, stderr: e.stderr };
+  }
+});
+
+router.delete('/agents/:id', async (ctx) => {
+  try {
+    const agents = await deleteAgentProfile(ctx.params.id);
+    ctx.body = { ok: true, agents };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message, stdout: e.stdout, stderr: e.stderr };
+  }
 });
 
 router.post('/restart-gateway', async (ctx) => {
@@ -1445,16 +1681,35 @@ router.post('/restart-gateway', async (ctx) => {
 });
 
 router.get('/service-status', async (ctx) => {
-  const statuses = [];
-  for (const agent of AGENTS()) {
+  const statuses = await Promise.all(AGENTS().map(async (agent) => {
     try {
-      const { stdout } = await execFileAsync('systemctl', ['is-active', agent.service], { timeout: 10000 });
-      statuses.push({ agent: agent.id, profile: agent.profile, name: agent.name, service: agent.service, status: stdout.trim(), ok: stdout.trim() === 'active' });
+      const { stdout } = await execFileAsync('systemctl', ['is-active', agent.service], { timeout: 4000 });
+      const gw = readGatewayState(agent);
+      return { agent: agent.id, profile: agent.profile, name: agent.name, service: agent.service, status: stdout.trim(), ok: stdout.trim() === 'active', ...gw };
     } catch (e) {
-      statuses.push({ agent: agent.id, profile: agent.profile, name: agent.name, service: agent.service, status: (e.stdout || '').trim() || 'unknown', ok: false, error: e.message });
+      const st = String((e.stdout || '')).trim() || 'inactive';
+      const gw = readGatewayState(agent);
+      return { agent: agent.id, profile: agent.profile, name: agent.name, service: agent.service, status: st, ok: false, ...gw };
     }
-  }
+  }));
   ctx.body = { ok: statuses.every((s) => s.ok), statuses, status: statuses.map((s) => `${s.profile || s.agent}:${s.status}`).join(' ') };
+});
+
+router.post('/gateway-control', async (ctx) => {
+  try {
+    const action = String(ctx.request.body?.action || '').trim();
+    if (!['start', 'stop', 'restart'].includes(action)) throw new Error('只支持 start / stop / restart');
+    const targets = resolveAgentTargets(String(ctx.request.body?.agent || 'default').trim());
+    const results = [];
+    for (const agent of targets) {
+      const { stdout, stderr } = await systemctlAction(agent.service, action);
+      results.push({ agent: agent.id, profile: agent.profile, service: agent.service, action, stdout, stderr });
+    }
+    ctx.body = { ok: true, results };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message, stdout: e.stdout, stderr: e.stderr };
+  }
 });
 
 app.use(bodyParser({ jsonLimit: '30mb' }));
