@@ -66,8 +66,7 @@ sudo bash install.sh
 hermes-model-panel          # 打印监听地址和怎么开
 ```
 
-默认只绑 **127.0.0.1:3010**，本机浏览器打开 `http://127.0.0.1:3010/`。  
-别的设备用 `http://服务器IP:3010/` **打不开**。要局域网访问：在 `/etc/hermes-model-panel.env` 设 `HOST=0.0.0.0`，再 `sudo systemctl restart hermes-model-panel`，然后用 `http://那台机器的IP:3010/`。有域名就走反代。
+默认只绑 **127.0.0.1:3010**。你是 SSH 上云服务器装的：服务器自己的浏览器一般没有，**笔记本/手机直接打开 `http://公网IP:3010/` 现在打不开**，这是正常的。
 
 然后在面板里：
 
@@ -75,29 +74,32 @@ hermes-model-panel          # 打印监听地址和怎么开
 2. **聊天平台** → 给对应 agent 填 Token
 3. **设置** → 重启对应 Gateway → 聊天里 `/reset`
 
-## 怎么给外部访问（小白按这个做）
+## 云服务器怎么从外面打开（小白按这个做）
 
-装完**默认只能本机开**。手机、另一台电脑、公网 IP **打不开**，这是正常的，不是装坏了。
+前提：面板已经装在 **VPS / 云主机** 上，你用 SSH 登录那台机器操作。家里电脑和服务器**不是**同一个 Wi-Fi，所以不要找 192.168。
 
-### 1）先确认本机已经起来
+装完默认只听 `127.0.0.1`，外网用 `http://公网IP:3010/` **一定打不开**，不是装坏了。
 
-在装面板的那台机器上：
+### 1）在服务器上确认服务活着
+
+SSH 进那台机器：
 
 ```bash
 hermes-model-panel
+sudo systemctl status hermes-model-panel --no-pager
 ```
 
-看到「本机浏览器打开 http://127.0.0.1:3010/」就对了。先在这台机器自己的浏览器试一下。
+看到 running、以及 `http://127.0.0.1:3010/` 就对了。这一步只能证明**服务器内部**通了。
 
-### 2）改成局域网 / IP:端口 能打开
+### 2）让进程听外网网卡
 
-还是在那台机器上：
+还在 SSH 里：
 
 ```bash
 sudo nano /etc/hermes-model-panel.env
 ```
 
-找到（没有就自己加一行）：
+找到（没有就加一行）：
 
 ```
 HOST=127.0.0.1
@@ -109,57 +111,82 @@ HOST=127.0.0.1
 HOST=0.0.0.0
 ```
 
-保存退出，然后：
+保存，然后：
 
 ```bash
 sudo systemctl restart hermes-model-panel
 hermes-model-panel
 ```
 
-命令会打印类似 `http://192.168.x.x:3010/` 的地址。手机和电脑要跟服务器在**同一个 Wi-Fi / 内网**，浏览器打开那一行。
+只改这一项，浏览器还是可能打不开——云厂商还有一层门。
 
-云服务器还要在商家控制台给 **3010/tcp** 加安全组 / 防火墙放行，例如：
+### 3）云控制台安全组（这一步最容易漏）
+
+打开你买服务器的网页后台（阿里云 / 腾讯云 / 华为云 / Lightsail / DigitalOcean / UpCloud …）：
+
+1. 找到这台机器的 **安全组 / Firewall / Networking**
+2. **入站 / Inbound** 增加一条：协议 TCP，端口 **3010**，来源先写你自己的家庭/公司 IP；实在不知道就 `0.0.0.0/0`（全世界都能扫到这个端口）
+3. 保存。有的商家还要「应用到实例」
+
+只改服务器里的 env、不改安全组，外网永远进不来。
+
+### 4）服务器自己的防火墙
+
+有的镜像还开了 ufw / firewalld。SSH 里：
 
 ```bash
+# ufw
 sudo ufw allow 3010/tcp
 sudo ufw reload
+sudo ufw status
+
+# 或 firewalld
+sudo firewall-cmd --add-port=3010/tcp --permanent
+sudo firewall-cmd --reload
 ```
 
-（没装 ufw 就按你用的防火墙来，阿里云/腾讯云还要在网页安全组里放行。）
+没装这些命令就跳过。
 
-### 3）公网用 IP:3010 直开（不推荐，但能用）
+### 5）用公网 IP 打开
 
-上面改完 `HOST=0.0.0.0` 并且安全组放行后，外网浏览器打开：
+在**你自己的电脑或手机浏览器**（不要在服务器里找浏览器）打开：
 
 `http://你的公网IP:3010/`
 
-这时面板是裸奔的。**务必**再改同一个 env：
+公网 IP 在云控制台「实例详情」里，或 SSH 里：
+
+```bash
+curl -4 -s ifconfig.me; echo
+```
+
+必须是 **http**（不是 https），端口是 **3010**。  
+这时面板是裸奔的，**务必**再改同一个 env：
 
 ```
 AUTH_DISABLED=0
 ADMIN_PASSWORD=自己设一个够长的密码
 ```
 
-再执行：
-
 ```bash
 sudo systemctl restart hermes-model-panel
 ```
 
-脚本**不会**在屏幕上打印密码。
+密码不会打印到屏幕上。
 
-### 4）有域名（推荐）
+### 6）有域名（推荐，以后再做也行）
 
-不要把 3010 直接暴露到公网。用 Caddy / Nginx 反代到 `127.0.0.1:3010`，浏览器走 `https://你的域名`。仓库里有一份示例：`caddy/model.example.com.caddy`。这时 `HOST` 可以继续留 `127.0.0.1`。
+不要长期把 3010 直接挂在公网上。解析 A 记录到这台机器，用 Caddy / Nginx 反代到 `127.0.0.1:3010`，浏览器走 `https://你的域名`。示例：`caddy/model.example.com.caddy`。反代配好后，`HOST` 可以改回 `127.0.0.1`，安全组只放行 80/443。
 
 ### 打不开时先看这几条
 
 | 现象 | 多半是 |
 | --- | --- |
-| 只有本机能开，别人 IP:3010 不行 | 还是 `HOST=127.0.0.1`，没改或没重启 |
-| 改了还是不行 | 云安全组 / ufw 没放行 3010 |
-| 能开网页但空白 / 连不上 | `sudo systemctl status hermes-model-panel` |
-| 公网谁都能进、没有登录 | 没设 `AUTH_DISABLED=0` |
+| `http://公网IP:3010/` 一直转圈 / 超时 | 安全组没放行 3010，或 `HOST` 还是 127.0.0.1 |
+| 改了 HOST 还超时 | 只改了 env，云控制台安全组没保存 |
+| 连接被拒绝 | 服务没起来：`sudo systemctl status hermes-model-panel` |
+| 能打开但谁都能进、没登录 | 没设 `AUTH_DISABLED=0` |
+| 用了 https:// 打不开 | 直连端口只有 http |
+| 国内访问国外 VPS 超时 | 线路问题，和面板无关；可先用手机流量试 |
 
 ## 手动跑
 

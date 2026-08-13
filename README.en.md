@@ -66,8 +66,7 @@ Open the panel:
 hermes-model-panel          # print listen address + how to open
 ```
 
-Default bind is **127.0.0.1:3010** — only that machine’s browser works (`http://127.0.0.1:3010/`).  
-Other devices using `http://SERVER_IP:3010/` will fail until you set `HOST=0.0.0.0` in `/etc/hermes-model-panel.env` and restart the unit. Then use `http://THAT_MACHINE_IP:3010/`. Put a reverse proxy in front for a domain.
+Default bind is **127.0.0.1:3010**. You installed over SSH on a cloud VM: there is usually no browser on the server, and `http://PUBLIC_IP:3010/` from your laptop **will not work yet**. That is expected.
 
 Then in the panel:
 
@@ -75,55 +74,65 @@ Then in the panel:
 2. **Chat platforms** → fill the token for that agent
 3. **Settings** → restart the matching Gateway → `/reset` in chat
 
-## External access (step by step)
+## Open it from the internet (cloud VPS)
 
-After install the panel is **localhost only**. Phones, other PCs, and the public IP will fail — that is expected.
+You installed on a **VPS**. Your laptop is not on the same Wi-Fi as the server. Do not look for 192.168.
 
-### 1) Confirm it is up on the machine
+Default listen is `127.0.0.1`. `http://PUBLIC_IP:3010/` from home **will fail** until the steps below.
+
+### 1) On the server, confirm the unit is up
+
+SSH in:
 
 ```bash
 hermes-model-panel
+sudo systemctl status hermes-model-panel --no-pager
 ```
 
-Open `http://127.0.0.1:3010/` in a browser **on that same machine**.
+`running` + `http://127.0.0.1:3010/` only means **inside the VM** it works.
 
-### 2) Allow LAN / `IP:port`
+### 2) Bind the public NIC
+
+Still in SSH:
 
 ```bash
 sudo nano /etc/hermes-model-panel.env
 ```
 
-Change:
-
-```
-HOST=127.0.0.1
-```
-
-to:
-
-```
-HOST=0.0.0.0
-```
-
-Then:
+Set `HOST=0.0.0.0`, then:
 
 ```bash
 sudo systemctl restart hermes-model-panel
-hermes-model-panel
 ```
 
-Use the printed `http://LAN_IP:3010/` from another device on the same network.
+This alone is often not enough — the cloud vendor has another door.
 
-Cloud VM: also open **3010/tcp** in the provider security group / firewall, e.g.
+### 3) Security group (most common miss)
+
+In the provider console (Aliyun / Tencent / Huawei / Lightsail / DigitalOcean / UpCloud …):
+
+1. Open **Security group / Firewall / Networking** for this instance
+2. **Inbound**: TCP **3010**, source = your home IP, or `0.0.0.0/0` if you must
+3. Save / apply to the instance
+
+If you only change the env file and skip this, the public IP never answers.
+
+### 4) Host firewall
 
 ```bash
-sudo ufw allow 3010/tcp
-sudo ufw reload
+sudo ufw allow 3010/tcp && sudo ufw reload
+# or: sudo firewall-cmd --add-port=3010/tcp --permanent && sudo firewall-cmd --reload
 ```
 
-### 3) Bare public `IP:3010` (works, not recommended)
+Skip if those commands do not exist.
 
-After `HOST=0.0.0.0` and a security-group hole, open `http://PUBLIC_IP:3010/`. Then **must** set in the same env:
+### 5) Open from your own browser
+
+On **your** laptop or phone (not on the server):
+
+`http://PUBLIC_IP:3010/`
+
+Public IP is on the instance page, or `curl -4 -s ifconfig.me`. Use **http**, port **3010**. Then set:
 
 ```
 AUTH_DISABLED=0
@@ -134,20 +143,19 @@ ADMIN_PASSWORD=a-long-password-you-choose
 sudo systemctl restart hermes-model-panel
 ```
 
-The installer never prints the password.
+### 6) Domain later (recommended)
 
-### 4) Domain (recommended)
-
-Keep `HOST=127.0.0.1` and reverse-proxy with Caddy/Nginx to `127.0.0.1:3010`. Example: `caddy/model.example.com.caddy`.
+Point an A record at the VM, reverse-proxy to `127.0.0.1:3010` (see `caddy/model.example.com.caddy`). Then `HOST` can go back to `127.0.0.1` and the security group only needs 80/443.
 
 ### If it does not open
 
 | Symptom | Likely cause |
 | --- | --- |
-| Only localhost works | Still `HOST=127.0.0.1`, or unit not restarted |
-| Still closed after the change | Security group / ufw blocking 3010 |
-| Service down | `sudo systemctl status hermes-model-panel` |
-| Anyone can enter with no login | `AUTH_DISABLED` still `1` |
+| Timeout on `http://PUBLIC_IP:3010/` | Security group closed, or still `HOST=127.0.0.1` |
+| Still timeout after HOST change | Console rule not saved / not applied |
+| Connection refused | `sudo systemctl status hermes-model-panel` |
+| Open to the world, no login | `AUTH_DISABLED` still `1` |
+| `https://` fails | Direct port is http only |
 
 ## Manual run
 
