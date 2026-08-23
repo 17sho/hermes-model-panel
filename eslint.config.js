@@ -1,0 +1,35 @@
+export default [
+  {
+    files: ["**/*.js", "**/*.mjs"],
+    ignores: ["node_modules/**", "public/index.html.pre-*"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        AbortController: "readonly",
+        btoa: "readonly",
+        Buffer: "readonly",
+        clearTimeout: "readonly",
+        console: "readonly",
+        document: "readonly",
+        fetch: "readonly",
+        FileReader: "readonly",
+        FormData: "readonly",
+        history: "readonly",
+        location: "readonly",
+        process: "readonly",
+        requestAnimationFrame: "readonly",
+        setTimeout: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
+        window: "readonly",
+      },
+    },
+    rules: {
+      "no-dupe-args": "error",
+      "no-dupe-keys": "error",
+      "no-undef": "error",
+      "no-unreachable": "error",
+    },
+  },
+];

@@ -7,10 +7,11 @@ import fssync from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import YAML from 'yaml';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
-const execFileAsync = promisify(execFile);
+import { atomicWriteFile, serializeFile } from './src/lib/atomic-files.js';
+import { publicError, safeEqual } from './src/lib/errors.js';
+import { execFileAsync } from './src/lib/process-runner.js';
+import { createRequireAuth } from './src/middleware/auth.js';
+import { securityHeadersAndOrigin } from './src/middleware/csrf.js';
 const PORT = Number(process.env.PORT || 3010);
 const HERMES_CONFIG = process.env.HERMES_CONFIG || '/root/.hermes/config.yaml';
 const HERMES_HOME = process.env.HERMES_HOME || path.dirname(HERMES_CONFIG);
@@ -59,27 +60,6 @@ function AGENTS() {
   return discoverAgents();
 }
 const PANEL_META_PATH = process.env.PANEL_META_PATH || '/root/.hermes/model-panel-meta.json';
-const fileQueues = new Map();
-function serializeFile(file, task) {
-  const key = path.resolve(file);
-  const previous = fileQueues.get(key) || Promise.resolve();
-  const current = previous.catch(() => {}).then(task);
-  fileQueues.set(key, current);
-  return current.finally(() => { if (fileQueues.get(key) === current) fileQueues.delete(key); });
-}
-
-async function atomicWriteFile(file, contents, mode = 0o600) {
-  const dir = path.dirname(file);
-  await fs.mkdir(dir, { recursive: true });
-  const tmp = path.join(dir, `.${path.basename(file)}.tmp-${process.pid}-${crypto.randomBytes(6).toString('hex')}`);
-  try {
-    await fs.writeFile(tmp, contents, { mode });
-    await fs.rename(tmp, file);
-    await fs.chmod(file, mode);
-  } finally {
-    await fs.rm(tmp, { force: true }).catch(() => {});
-  }
-}
 const DEFAULT_OPENAI_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 
 function readPanelMeta() {
@@ -185,33 +165,7 @@ function loginRateRecord(ip, failed = false) {
   return item;
 }
 
-app.use(async (ctx, next) => {
-  ctx.set('X-Content-Type-Options', 'nosniff');
-  ctx.set('X-Frame-Options', 'DENY');
-  ctx.set('Referrer-Policy', 'same-origin');
-  ctx.set('Permissions-Policy', 'camera=(), geolocation=(), microphone=()');
-  ctx.set('Cross-Origin-Resource-Policy', 'same-origin');
-  if (ctx.path.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(ctx.method)) {
-    const origin = ctx.get('origin');
-    if (origin) {
-      let allowed = false;
-      try { allowed = new URL(origin).host === ctx.host && new URL(origin).protocol === ctx.protocol + ':'; } catch {}
-      if (!allowed) { ctx.status = 403; ctx.body = { ok: false, error: 'Origin 不允许' }; return; }
-    }
-  }
-  await next();
-});
-
-function safeEqual(a, b) {
-  const ab = Buffer.from(String(a));
-  const bb = Buffer.from(String(b));
-  return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
-}
-function publicError(error, fallback = '操作失败') {
-  let message = String(error?.message || fallback).replace(/(?:\/[A-Za-z0-9._-]+){2,}/g, '[路径已隐藏]');
-  if (/stdout|stderr|child process|command failed/i.test(message)) message = fallback;
-  return message.slice(0, 240);
-}
+app.use(securityHeadersAndOrigin());
 
 async function updateEnvKey(file, key, value) {
   if (/[\r\n]/.test(String(value))) throw new Error('值不能包含换行');
@@ -291,26 +245,16 @@ function validTimedHmac(value, purpose) {
   return safeEqual(mac, crypto.createHmac('sha256', SESSION_SECRET).update(`${purpose}:${stamp}`).digest('hex'));
 }
 
-function requireAuth(ctx, next) {
-  const proxyAuthenticated = TRUST_PROXY_AUTH
-    && ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ctx.req.socket?.remoteAddress)
-    && validTimedHmac(ctx.get(TRUSTED_PROXY_AUTH_HEADER), 'proxy');
-  const cliAuthenticated = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ctx.req.socket?.remoteAddress)
-    && validTimedHmac(ctx.get(CLI_AUTH_HEADER), 'cli');
-  if (ctx.path === '/api/login' || ctx.path === '/api/health') return next();
-  const payload = tokenPayload(ctx.cookies.get(COOKIE_NAME));
-  if (!AUTH_DISABLED && !proxyAuthenticated && !cliAuthenticated && !payload) {
-    ctx.status = 401;
-    ctx.body = { ok: false, error: 'unauthorized' };
-    return;
-  }
-  if (!AUTH_DISABLED && !['GET', 'HEAD', 'OPTIONS'].includes(ctx.method) && !proxyAuthenticated && !cliAuthenticated) {
-    if (!payload || !safeEqual(ctx.get('x-csrf-token'), payload.csrf || '')) {
-      ctx.status = 403; ctx.body = { ok: false, error: 'CSRF 校验失败' }; return;
-    }
-  }
-  return next();
-}
+const requireAuth = createRequireAuth({
+  authDisabled: () => AUTH_DISABLED,
+  cliAuthHeader: CLI_AUTH_HEADER,
+  cookieName: COOKIE_NAME,
+  safeEqual,
+  tokenPayload,
+  trustedProxyAuthHeader: TRUSTED_PROXY_AUTH_HEADER,
+  trustProxyAuth: TRUST_PROXY_AUTH,
+  validTimedHmac,
+});
 
 function getAgent(id = 'default') {
   const agents = AGENTS();
@@ -545,10 +489,6 @@ function redactKey(key = '') {
 
 function slugName(name = '') {
   return String(name).trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/v\d+$/, '').replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
-}
-
-function normalizedProviderName(name = '') {
-  return String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 function stableProviderKey(provider, index = 0) {
@@ -826,10 +766,6 @@ function endpoint(baseUrl, suffix) {
   return `${normalizeApiBaseUrl(baseUrl)}${suffix}`;
 }
 
-function normalizeModelListBaseUrl(baseUrl) {
-  return normalizeApiBaseUrl(baseUrl);
-}
-
 function pickText(data, apiMode) {
   if (!data) return '';
   if (apiMode === 'chat_completions' || apiMode === 'codex_responses') {
@@ -986,7 +922,7 @@ async function fetchProviderModelsDirect(baseUrl, apiKey, apiMode) {
   const started = Date.now();
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), 30000);
-  const url = endpoint(normalizeModelListBaseUrl(baseUrl), '/models');
+  const url = endpoint(baseUrl, '/models');
   const headers = { accept: 'application/json' };
   if (apiMode === 'anthropic_messages') {
     headers['x-api-key'] = apiKey;
@@ -1218,7 +1154,6 @@ router.post('/fetch-models', async (ctx) => {
 });
 
 router.post('/providers', async (ctx) => {
-  let writtenBackup = '';
   try {
     const p = ensureProviderFields(ctx.request.body || {}, true);
     const { cfg, backup, value: meta } = await updateConfig(async (cfg) => {
@@ -1233,7 +1168,6 @@ router.post('/providers', async (ctx) => {
       rebuildQuickCommands(cfg);
       return { provider: p, index };
     });
-    writtenBackup = backup;
     try { await rememberProviderMeta(meta.provider, meta.index); }
     catch { await restoreConfigBackup(HERMES_CONFIG, backup); throw new Error('中转站元数据保存失败，配置已回滚'); }
     ctx.body = { ok: true, backup, state: await publicState(cfg) };
@@ -1666,16 +1600,6 @@ const CHAT_PLATFORMS = [
 const CHAT_PLATFORM_IDS = new Set(CHAT_PLATFORMS.map((p) => p.id));
 const CHAT_PLATFORM_KEYS = new Set(CHAT_PLATFORMS.flatMap((p) => p.fields.map((f) => f.key)));
 const HERMES_BIN = process.env.HERMES_BIN || 'hermes';
-
-function parseToolsList(stdout = '') {
-  const out = [];
-  for (const line of String(stdout || '').split(/\r?\n/)) {
-    const m = line.match(/^\s*([✓✗])\s+(enabled|disabled)\s+(\S+)\s+/);
-    if (!m) continue;
-    out.push({ name: m[3], enabled: m[2] === 'enabled' });
-  }
-  return out;
-}
 
 function agentEnvPath(agent) {
   if (!agent) throw new Error('agent 不存在');
@@ -2192,8 +2116,8 @@ router.post('/restart-gateway', async (ctx) => {
     const targets = resolveAgentTargets(targetAgent);
     const results = [];
     for (const agent of targets) {
-      const { stdout, stderr, scope } = await systemctlAction(agent.service, 'restart', configuredServiceScope(agent));
-      results.push({ agent: agent.id, service: agent.service, effective_scope: scope, status: stdout.trim() ? 'completed' : 'completed' });
+      const { scope } = await systemctlAction(agent.service, 'restart', configuredServiceScope(agent));
+      results.push({ agent: agent.id, service: agent.service, effective_scope: scope, status: 'completed' });
     }
     ctx.body = { ok: true, results };
   } catch (e) {

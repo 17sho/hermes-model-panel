@@ -12,20 +12,27 @@ import YAML from 'yaml';
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const execFileAsync = promisify(execFile);
 const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
-const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+const script = fs.readFileSync(path.join(root, 'public/js/app.js'), 'utf8');
 assert.ok(script, '页面脚本存在');
 new vm.Script(script, { filename: 'public/index.html' });
 
 // Only the trusted HTML shell contributes to the legacy DOM contract. IDs in
 // JavaScript template strings are dynamic and must never be scanned as static.
-const shell = html.slice(0, html.indexOf('<script>'));
+const shell = html;
 const shellIds = new Set([...shell.matchAll(/\bid=["']([^"']+)["']/g)].map((m) => m[1]));
+assert.equal([...html.matchAll(/class=["'][^"']*panelSection/g)].length, 13, '13 个页面保持不变');
+assert.doesNotMatch(html, /\son[a-z]+\s*=/i, '静态 HTML 不再包含内联事件');
+assert.match(html, /<script type="module" src="js\/app\.js"><\/script>/, '前端脚本保持 ES module 入口');
 const legacyHtml = fs.readFileSync(path.join(root, 'public/index.html.pre-full-fix-20260823T145836Z'), 'utf8');
 const legacyShell = legacyHtml.slice(0, legacyHtml.indexOf('<script>'));
 const legacyStaticIds = [...legacyShell.matchAll(/\bid=["']([^"']+)["']/g)].map((m) => m[1]).filter((id) => id !== 'login');
 assert.equal(legacyStaticIds.length, 107, '旧静态 DOM 契约仍为 107 个 ID');
 assert.deepEqual(legacyStaticIds.filter((id) => !shellIds.has(id)), [], '旧静态 ID 零缺失');
 assert.ok(!legacyStaticIds.some((id) => id.includes('${')), '动态模板 ID 不得混入静态契约');
+const legacyScript = legacyHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1] || '';
+const apiPaths = new Set([...script.matchAll(/api\((['`])([^'`]+)\1/g)].map((match) => match[2]));
+const legacyApiPaths = new Set([...legacyScript.matchAll(/api\((['`])([^'`]+)\1/g)].map((match) => match[2]));
+assert.deepEqual([...legacyApiPaths].filter((apiPath) => !apiPaths.has(apiPath)), [], '前端 API 路径零缺失');
 
 // Execute the real attribute encoder with a malicious dynamic value. The
 // resulting markup must retain one data attribute and create no event handler.
@@ -129,12 +136,14 @@ try {
   await fsp.rm(tempDir, { recursive: true, force: true });
 }
 
+const dbutil = fs.readFileSync(path.join(root, 'scripts', 'dbutil.py'), 'utf8');
+assert.match(dbutil, /busy_timeout=5000/);
+assert.match(dbutil, /range\(3\)/);
+assert.match(dbutil, /BEGIN IMMEDIATE/);
+assert.match(dbutil, /rollback\(\)/);
 for (const name of ['delete-session.py', 'resume-session.py', 'set-session-model.py']) {
   const py = fs.readFileSync(path.join(root, 'scripts', name), 'utf8');
-  assert.match(py, /busy_timeout=5000/);
-  assert.match(py, /range\(3\)/);
-  assert.match(py, /BEGIN IMMEDIATE/);
-  assert.match(py, /rollback\(\)/);
+  assert.match(py, /immediate_transaction/);
 }
 
 const delegateDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'hmp-delegate-'));
