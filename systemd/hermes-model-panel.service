@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/hermes-model-panel
-EnvironmentFile=/etc/hermes-model-panel.env
-ExecStart=/usr/bin/node /opt/hermes-model-panel/server.js
+WorkingDirectory=/root/hermes-model-panel
+EnvironmentFile=/root/hermes-model-panel.env
+ExecStart=/usr/bin/node /root/hermes-model-panel/server.js
 Restart=always
 RestartSec=3
 User=root
