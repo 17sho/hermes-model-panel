@@ -1,80 +1,909 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<title>模型台 · Hermes</title>
-<meta name="theme-color" content="#f4f6f8">
-<script>try{const t=localStorage.getItem('hermes-theme'),d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches),v=d?'dark':'light';document.documentElement.dataset.theme=v;document.documentElement.style.colorScheme=v;document.querySelector('meta[name="theme-color"]').content=d?'#11161c':'#f4f6f8'}catch{}</script>
-<link rel="stylesheet" href="css/app.css?v=fixed-header-2">
-</head>
-<body>
-<section id="login" class="login hidden" aria-labelledby="loginTitle">
-  <form class="loginCard" data-static-submit="1">
-    <header class="loginHead">
-      <div class="loginMark" aria-hidden="true">◆</div>
-      <div class="loginBrand"><span>HERMES PANEL</span><h1 id="loginTitle">登录模型台</h1></div>
-    </header>
-    <p class="loginIntro">登录后管理 Agent、模型与运行服务。</p>
-    <div class="loginForm"><label for="password">管理员密码</label><div class="loginPassword"><span aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><input id="password" type="password" placeholder="输入管理员密码" autocomplete="current-password"></div><button id="loginBtn" class="primary" type="submit">进入控制台</button></div>
-    <footer class="loginFoot"><span class="loginStatusDot"></span><span>管理员会话受密码保护</span></footer>
-  </form>
-</section>
-<main id="app" class="appShell hidden">
-  <div id="menuShade" class="menuShade" data-static-click="2" aria-hidden="true"></div>
-  <aside id="sideMenu" class="sideMenu" aria-label="功能菜单">
-    <header class="sideBrand"><b>Hermes 模型台</b><span>CONTROL CONSOLE · v1.1.0</span></header>
-    <nav class="sideNav">
-      <div class="navLabel">概览</div>
-      <button type="button" data-target="currentSection" data-static-click="3"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5M8 17h8"/></svg></span>当前模型</button>
-      <button type="button" data-target="workStatusSection" data-static-click="4"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg></span>工作状态</button>
-      <button type="button" data-target="sessionResumeSection" data-static-click="5"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4v16M6 7h5M6 12h9M6 17h6"/><circle cx="4" cy="7" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="17" r="1"/></svg></span>选上下文</button>
-      <div class="navLabel">模型</div>
-      <button type="button" data-target="addSection" data-static-click="6"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="M6 9h7M6 13h4M19 9v6M16 12h6"/></svg></span>添加中转站</button>
-      <button type="button" data-target="providersSection" data-static-click="7"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 12h4a4 4 0 0 0 4-4M11 12a4 4 0 0 1 4 4"/></svg></span>中转站与模型</button>
-      <button type="button" data-target="testSection" data-static-click="8"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3M8 16h8"/></svg></span>中转站测试</button>
-      <button type="button" data-target="imageGenSection" data-static-click="9"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m4 17 4-4 3 3 3-3 6 5"/></svg></span>生图模型选择</button>
-      <div class="navLabel">Agent</div>
-      <button type="button" data-target="chatToolsSection" data-static-click="10"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h12a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H9l-5 4v-4a3 3 0 0 1-2-3V8a3 3 0 0 1 2-3Z"/><path d="M7 10h7M7 13h4"/></svg></span>聊天平台</button>
-      <button type="button" data-target="agentToolsSection" data-static-click="11"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m14 6 4-4 4 4-4 4M16 8 8 16"/><path d="m5 13-3 3 6 6 3-3M14 3l7 7"/></svg></span>Agent 工具</button>
-      <button type="button" data-target="agentSkillsSection" data-static-click="12"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 3h4a2 2 0 1 1 4 0h3a2 2 0 0 1 2 2v4a2 2 0 1 0 0 4v4a2 2 0 0 1-2 2h-4a2 2 0 1 1-4 0H7a2 2 0 0 1-2-2v-3a2 2 0 1 1 0-4V5a2 2 0 0 1 2-2Z"/></svg></span>Skills</button>
-      <div class="navLabel">系统</div>
-      <button type="button" data-target="readableLogsSection" data-static-click="13"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>易懂日志</button>
-      <button type="button" data-target="commandsSection" data-static-click="14"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg></span>快捷命令</button>
-      <button type="button" data-target="settingsSection" data-static-click="15"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.5 1A7 7 0 0 0 15 6l-.4-3h-4L10 6a7 7 0 0 0-1.5 1L6 6 4 9.5 6 11a7 7 0 0 0 0 2l-2 1.5L6 18l2.5-1A7 7 0 0 0 10 18l.5 3h4l.5-3a7 7 0 0 0 1.5-1l2.5 1 2-3.5-2-1.5a7 7 0 0 0 0-1Z"/></svg></span>设置</button>
-    </nav>
-    <footer class="sideFoot"><button id="themeToggle" class="themeNav" type="button" data-static-click="70" aria-label="切换夜间模式" title="切换夜间模式"><span class="themeIcon" aria-hidden="true">◐</span><span class="themeLabel">夜间模式</span></button><button id="logoutBtn" class="logoutNav" type="button" data-static-click="16"><svg class="logoutIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/></svg><span>退出登录</span></button></footer>
-  </aside>
-  <div class="workspace">
-    <header class="top"><button id="mobileMenuBtn" class="mobileMenuBtn" type="button" aria-controls="sideMenu" aria-expanded="false" data-static-click="17"><span class="menuIcon" aria-hidden="true"><i></i><i></i><i></i></span><span class="menuLabel">菜单</span></button><div class="title"><h1>模型台</h1></div><div class="topRight"><div class="badge" id="serviceStatus" aria-label="Agent 状态"></div></div></header>
-    <div class="content">
-      <section id="currentSection" class="panelSection activeSection"><header class="sectionHead"><div><span class="sectionKicker">OVERVIEW</span><h2>当前模型</h2><p class="pageHint">按 Agent 查看当前中转和模型；配置切换后请重置会话或重启 Gateway。</p></div><button data-static-click="18">刷新状态</button></header><div id="current" class="current"></div><div class="hr"></div><h3>新建 Agent</h3><p class="muted">可空白创建或克隆模型配置；聊天 Token 与 API 密钥不会被克隆。</p><div class="row"><input id="newAgentName" placeholder="名字，例如 agent4" autocomplete="off"><select id="cloneFromAgent"><option value="">空白新建</option></select><select id="newAgentScope"><option value="system">系统级 systemd</option><option value="user">用户级 systemd</option></select></div><div class="actions"><button id="createAgentBtn" class="primary" data-static-click="19">新建 Agent</button></div></section>
-      <section id="workStatusSection" class="panelSection"><header class="sectionHead"><div><span class="sectionKicker">RUNTIME</span><h2>工作状态</h2><p class="pageHint">查看 Gateway、任务和聊天平台连接情况。</p></div><button data-static-click="20">刷新</button></header><div id="workStatusBox" class="workList"></div></section>
-      <section id="sessionResumeSection" class="panelSection"><header class="sessPageHead"><div><span class="sectionKicker">SESSIONS</span><h2>选上下文</h2><p class="pageHint">按 Agent 搜索并分页浏览上下文。</p></div><button data-static-click="21">刷新</button></header><div class="sessionToolbar"><label>Agent<select id="sessionAgentSelect" data-static-change="22"></select></label><label>搜索<input id="sessionSearch" type="search" placeholder="标题、联系人、平台或模型" data-static-keydown="23"></label><button data-static-click="24">搜索</button><label>每页<select id="sessionPageSize" data-static-change="25"><option>10</option><option selected>20</option><option>30</option><option>50</option></select></label></div><div id="sessionResumeBox" class="sessList"></div><div id="sessionPager" class="sessionPager"></div></section>
-      <section id="addSection" class="panelSection"><header class="sectionHead"><div><span class="sectionKicker">PROVIDER</span><h2>添加中转站</h2><p class="pageHint">保存中转地址、接口模式与模型列表。</p></div></header><div class="form"><div class="row"><input id="addName" placeholder="名称，例如 3号abc"><select id="addMode"><option value="chat_completions">OpenAI API（/v1/chat/completions）</option><option value="anthropic_messages">Claude API（/v1/messages）</option><option value="responses">OpenAI Responses（/v1/responses）</option><option value="codex_responses">Codex Responses（/v1/responses）</option></select></div><input id="addUrl" placeholder="Base URL，例如 https://api.example.com/v1"><input id="addKey" type="password" autocomplete="new-password" placeholder="API Key（不会明文展示）"><div class="row"><input id="addModel" placeholder="默认模型"><button id="fetchAddModelsBtn" data-static-click="26">一键获取模型</button></div><textarea id="addModels" placeholder="其它模型，每行一个，可选"></textarea><button id="addProviderBtn" class="primary" data-static-click="27">添加并生成编号</button></div></section>
-      <section id="providersSection" class="panelSection"><header class="sectionHead"><div><span class="sectionKicker">MODELS</span><h2>中转站与模型</h2><p class="pageHint">搜索、分页、测试和切换所有已配置模型。</p></div></header><div class="providerTools"><input id="providerSearch" type="search" placeholder="搜索名称、URL、模式、Key 预览或模型" data-static-input="28"><select id="providerJump" data-static-change="29"><option value="">直达中转站</option></select><div class="providerPager"><button data-static-click="30">首页</button><button data-static-click="31">上一页</button><input id="providerPageInput" type="number" min="1" value="1" data-static-change="32" aria-label="页码"><button data-static-click="33">下一页</button><button data-static-click="34">末页</button><span id="providerPageInfo" class="muted"></span></div></div><div id="providerSummary" class="providerSummary"></div><div id="providers" class="providers"></div></section>
-      <section id="testSection" class="panelSection"><header class="sectionHead"><div><span class="sectionKicker">DIAGNOSTICS</span><h2>中转站测试</h2><p class="pageHint">测试不会改变当前模型配置。</p></div></header><div class="testbar"><label><span class="k">测试消息</span><textarea id="testMessage">你好，请用一句话回复：测试成功</textarea></label><label><span class="k">选择范围</span><select id="testTarget"><option value="current">当前使用</option><option value="all">测试全部</option></select></label><button id="runTestBtn" class="primary" data-static-click="35">开始测试</button></div><div class="actions"><button id="testLogToggleBtn" data-static-click="36">查看检测日志</button></div><div id="testLog" class="testLog hidden"><header class="testLogHead"><b>检测日志</b><div class="actions"><button data-static-click="37">清空</button><button data-static-click="38">收起</button></div></header><div id="testLogBody" class="testLogBody"><div class="muted">等待开始检测...</div></div></div><div id="testResults" class="results"></div></section>
-      <section id="imageGenSection" class="panelSection"><header class="sectionHead"><div><span class="sectionKicker">IMAGE</span><h2>生图模型选择</h2><p class="pageHint">按 Agent 的当前中转获取并切换生图模型。</p></div></header><div id="imageGenBox" class="providers"></div></section>
-      <section id="chatToolsSection" class="panelSection"><header class="sectionHead"><div><span class="sectionKicker">CHANNELS</span><h2>聊天平台</h2><p class="pageHint">Secret 不回显；非空字段才会提交。</p></div><button data-static-click="39">刷新</button></header><div id="chatToolsBox" class="providers"></div></section>
-      <section id="agentToolsSection" class="panelSection"><header class="sessPageHead"><div><span class="sectionKicker">TOOLS</span><h2>Agent 工具</h2><p class="pageHint">保存启用能力后重启对应 Gateway 生效。</p></div><button data-static-click="40">刷新</button></header><div id="agentToolsBox" class="sessList"></div></section>
-      <section id="agentSkillsSection" class="panelSection"><header class="sessPageHead"><div><span class="sectionKicker">SKILLS</span><h2>Skills</h2><p class="pageHint">默认全部启用，关闭项按 Agent 保存。</p></div><button data-static-click="41">刷新</button></header><div id="agentSkillsBox" class="sessList"></div></section>
-      <section id="readableLogsSection" class="panelSection"><header class="sectionHead"><div><span class="sectionKicker">LOGS</span><h2>易懂日志</h2><p class="pageHint">易懂视图与原始 Gateway 日志并存。</p></div><button id="readableRefreshBtn" data-static-click="42">刷新</button></header><div class="readableToolbar"><label>Agent<select id="readableAgent" data-static-change="43"></select></label><label>级别<select id="readableLevel" data-static-change="44"><option value="all">全部</option><option value="error">只看异常</option><option value="warning">异常与提醒</option><option value="success">正常事件</option></select></label><label>行数<select id="readableLines" data-static-change="45"><option value="80">最近 80 行</option><option value="160" selected>最近 160 行</option><option value="300">最近 300 行</option></select></label></div><div id="readableSummary" class="readableSummary" aria-live="polite"></div><div id="readableLogs" class="readableList" aria-live="polite"></div></section>
-      <section id="commandsSection" class="panelSection"><div class="commandEntry"><div><span class="sectionKicker">COMMANDS</span><h2>快捷命令</h2><p class="muted">查看平台可用的斜杠命令和目标。</p></div><button class="primary" data-static-click="46">查看快捷命令</button></div></section>
-      <section id="settingsSection" class="panelSection"><header class="settingsHero"><div><span class="sectionKicker">SETTINGS</span><h2>设置</h2><p class="muted">安全、用量、服务层级、日志、配对和 Gateway 操作。</p></div></header><div class="settingsGrid">
-        <section class="settingsGroup"><div class="settingsGroupHead"><span class="settingsIcon">01</span><div><h3>API 使用量</h3><p class="muted">24 小时、7 天及累计统计</p></div></div><span id="usageSource" class="muted">点击按钮查看</span><div class="actions"><button id="usageToggleBtn" data-static-click="47">查看 API 使用量</button></div><div id="usage" class="usageGrid hidden"></div></section>
-        <section class="settingsGroup"><div class="settingsGroupHead"><span class="settingsIcon">02</span><div><h3>面板安全</h3><p class="muted">登录密码与访问保护</p></div></div><p id="authHint" class="muted">正在读取设置</p><div class="form"><label class="settingSwitch"><input id="authEnabled" type="checkbox"><span class="switchTrack"></span><span>打开密码保护</span></label><input id="authOldPassword" type="password" autocomplete="current-password" placeholder="当前密码"><input id="authNewPassword" type="password" autocomplete="new-password" placeholder="新密码，至少 8 位"><button id="saveAuthBtn" class="primary" data-static-click="48">保存密码设置</button><button class="danger" data-static-click="49">退出全部设备</button></div></section>
-        <section class="settingsGroup"><div class="settingsGroupHead"><span class="settingsIcon">03</span><div><h3>Gateway 服务</h3><p class="muted">服务层级与原始日志</p></div></div><div class="settingFields"><label>目标 Agent<select id="pairingAgent" data-static-change="50"></select></label><label>服务层级<select id="serviceScope"><option value="auto">自动识别</option><option value="system">系统级 systemd</option><option value="user">用户级 systemd</option></select></label></div><div class="actions"><button id="saveScopeBtn" data-static-click="51">保存服务层级</button><button id="loadGatewayLogsBtn" data-static-click="52">查看原始日志</button></div><pre id="gatewayLogs" class="testLogBody hidden"></pre><p id="serviceScopeHint" class="settingsNote">自动识别会优先使用已存在的系统级 Unit。</p></section>
-        <section class="settingsGroup"><div class="settingsGroupHead"><span class="settingsIcon">04</span><div><h3>批准聊天配对</h3><p class="muted">批准一次性配对码</p></div></div><div class="settingFields"><label>聊天平台<select id="pairingPlatform" data-static-change="53"><option value="feishu">飞书</option><option value="telegram">Telegram</option><option value="discord">Discord</option><option value="slack">Slack</option><option value="whatsapp">WhatsApp</option><option value="signal">Signal</option><option value="weixin">微信</option></select></label><label>配对码<input id="pairingCode" maxlength="16" autocomplete="off" placeholder="例如 FAWJ3QYM" data-static-input="54" data-static-keydown="55"></label></div><button id="approvePairingBtn" class="primary" data-static-click="56">批准配对</button><p id="pairingHint" class="settingsNote">只批准你确认身份的用户。</p></section>
-        <section class="settingsGroup settingsDanger"><div class="settingsGroupHead"><span class="settingsIcon">05</span><div><h3>服务操作</h3><p class="muted">配置刷新、安装与重启</p></div></div><div class="actions"><button data-static-click="57">重建快捷命令</button><button data-static-click="58">刷新面板状态</button><select id="restartAgent"></select><button id="installGatewayBtn" class="primary hidden" data-static-click="59">安装并启动 Gateway</button><button id="restartGatewayBtn" class="danger" data-static-click="60">重启 Gateway</button></div><p id="gatewayActionHint" class="settingsNote">重启会中断正在运行的任务。</p></section>
-        <section class="settingsGroup"><div class="settingsGroupHead"><span class="settingsIcon">06</span><div><h3>面板在线更新</h3><p class="muted">当前版本 v1.1.0 · 从 GitHub 获取已发布的最新代码</p></div></div><p id="panelUpdateHint" class="settingsNote">点击检查更新；更新时会备份当前版本并自动重启。</p><div class="actions"><button id="checkPanelUpdateBtn" data-static-click="71">检查更新</button><button id="runPanelUpdateBtn" class="primary hidden" data-static-click="72">立即更新</button></div></section>
-      </div></section>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"
+    />
+    <title>模型台 · Hermes</title>
+    <meta name="theme-color" content="#f4f6f8" />
+    <script>
+      try {
+        const t = localStorage.getItem("hermes-theme"),
+          d =
+            t === "dark" ||
+            (!t && matchMedia("(prefers-color-scheme:dark)").matches),
+          v = d ? "dark" : "light";
+        document.documentElement.dataset.theme = v;
+        document.documentElement.style.colorScheme = v;
+        document.querySelector('meta[name="theme-color"]').content = d
+          ? "#11161c"
+          : "#f4f6f8";
+      } catch {}
+    </script>
+    <link rel="stylesheet" href="css/app.css?v=login-center-1" />
+  </head>
+  <body>
+    <section id="login" class="login hidden" aria-labelledby="loginTitle">
+      <form class="loginCard" data-static-submit="1">
+        <header class="loginHead">
+          <div class="loginMark" aria-hidden="true">◆</div>
+          <div class="loginBrand">
+            <span>HERMES PANEL · v1.1.1</span>
+            <h1 id="loginTitle">登录模型台</h1>
+          </div>
+        </header>
+        <p class="loginIntro">登录后管理 Agent、模型与运行服务。</p>
+        <div class="loginForm">
+          <label for="password">管理员密码</label>
+          <div class="loginPassword">
+            <span aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <rect x="5" y="10" width="14" height="10" rx="2" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg></span
+            ><input
+              id="password"
+              type="password"
+              placeholder="输入管理员密码"
+              autocomplete="current-password"
+            />
+          </div>
+          <button id="loginBtn" class="primary" type="submit">
+            进入控制台
+          </button>
+        </div>
+        <footer class="loginFoot">
+          <span class="loginStatusDot"></span><span>管理员会话受密码保护</span>
+        </footer>
+      </form>
+    </section>
+    <main id="app" class="appShell hidden">
+      <div
+        id="menuShade"
+        class="menuShade"
+        data-static-click="2"
+        aria-hidden="true"
+      ></div>
+      <aside id="sideMenu" class="sideMenu" aria-label="功能菜单">
+        <header class="sideBrand">
+          <b>Hermes 模型台</b><span>CONTROL CONSOLE · v1.1.1</span>
+        </header>
+        <nav class="sideNav">
+          <div class="navLabel">概览</div>
+          <button
+            type="button"
+            data-target="currentSection"
+            data-static-click="3"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <rect x="4" y="4" width="16" height="16" rx="3" />
+                <path d="M8 9h8M8 13h5M8 17h8" /></svg></span
+            >当前模型
+          </button>
+          <button
+            type="button"
+            data-target="workStatusSection"
+            data-static-click="4"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <path d="M3 12h4l2-6 4 12 2-6h6" /></svg></span
+            >工作状态
+          </button>
+          <button
+            type="button"
+            data-target="sessionResumeSection"
+            data-static-click="5"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <path d="M6 4v16M6 7h5M6 12h9M6 17h6" />
+                <circle cx="4" cy="7" r="1" />
+                <circle cx="4" cy="12" r="1" />
+                <circle cx="4" cy="17" r="1" /></svg></span
+            >选上下文
+          </button>
+          <div class="navLabel">模型</div>
+          <button type="button" data-target="addSection" data-static-click="6">
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <rect x="3" y="5" width="13" height="14" rx="2" />
+                <path d="M6 9h7M6 13h4M19 9v6M16 12h6" /></svg></span
+            >添加中转站
+          </button>
+          <button
+            type="button"
+            data-target="providersSection"
+            data-static-click="7"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <circle cx="5" cy="12" r="2" />
+                <circle cx="19" cy="6" r="2" />
+                <circle cx="19" cy="18" r="2" />
+                <path
+                  d="M7 12h4a4 4 0 0 0 4-4M11 12a4 4 0 0 1 4 4"
+                /></svg></span
+            >中转站与模型
+          </button>
+          <button type="button" data-target="testSection" data-static-click="8">
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3M8 16h8"
+                /></svg></span
+            >中转站测试
+          </button>
+          <button
+            type="button"
+            data-target="imageGenSection"
+            data-static-click="9"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <circle cx="9" cy="10" r="2" />
+                <path d="m4 17 4-4 3 3 3-3 6 5" /></svg></span
+            >生图模型选择
+          </button>
+          <div class="navLabel">Agent</div>
+          <button
+            type="button"
+            data-target="chatToolsSection"
+            data-static-click="10"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M4 5h12a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H9l-5 4v-4a3 3 0 0 1-2-3V8a3 3 0 0 1 2-3Z"
+                />
+                <path d="M7 10h7M7 13h4" /></svg></span
+            >聊天平台
+          </button>
+          <button
+            type="button"
+            data-target="agentToolsSection"
+            data-static-click="11"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <path d="m14 6 4-4 4 4-4 4M16 8 8 16" />
+                <path d="m5 13-3 3 6 6 3-3M14 3l7 7" /></svg></span
+            >Agent 工具
+          </button>
+          <button
+            type="button"
+            data-target="agentSkillsSection"
+            data-static-click="12"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M8 3h4a2 2 0 1 1 4 0h3a2 2 0 0 1 2 2v4a2 2 0 1 0 0 4v4a2 2 0 0 1-2 2h-4a2 2 0 1 1-4 0H7a2 2 0 0 1-2-2v-3a2 2 0 1 1 0-4V5a2 2 0 0 1 2-2Z"
+                /></svg></span
+            >Skills
+          </button>
+          <div class="navLabel">系统</div>
+          <button
+            type="button"
+            data-target="readableLogsSection"
+            data-static-click="13"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z" />
+                <path d="M9 8h6M9 12h6M9 16h3" /></svg></span
+            >易懂日志
+          </button>
+          <button
+            type="button"
+            data-target="commandsSection"
+            data-static-click="14"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <path d="m7 9 3 3-3 3M13 15h4" /></svg></span
+            >快捷命令
+          </button>
+          <button
+            type="button"
+            data-target="settingsSection"
+            data-static-click="15"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.5 1A7 7 0 0 0 15 6l-.4-3h-4L10 6a7 7 0 0 0-1.5 1L6 6 4 9.5 6 11a7 7 0 0 0 0 2l-2 1.5L6 18l2.5-1A7 7 0 0 0 10 18l.5 3h4l.5-3a7 7 0 0 0 1.5-1l2.5 1 2-3.5-2-1.5a7 7 0 0 0 0-1Z"
+                /></svg></span
+            >设置
+          </button>
+        </nav>
+        <footer class="sideFoot">
+          <button
+            id="themeToggle"
+            class="themeNav"
+            type="button"
+            data-static-click="70"
+            aria-label="切换夜间模式"
+            title="切换夜间模式"
+          >
+            <span class="themeIcon" aria-hidden="true">◐</span
+            ><span class="themeLabel">夜间模式</span></button
+          ><button
+            id="logoutBtn"
+            class="logoutNav"
+            type="button"
+            data-static-click="16"
+          >
+            <svg
+              class="logoutIcon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M10 17l5-5-5-5" />
+              <path d="M15 12H3" />
+              <path d="M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" /></svg
+            ><span>退出登录</span>
+          </button>
+        </footer>
+      </aside>
+      <div class="workspace">
+        <header class="top">
+          <button
+            id="mobileMenuBtn"
+            class="mobileMenuBtn"
+            type="button"
+            aria-controls="sideMenu"
+            aria-expanded="false"
+            data-static-click="17"
+          >
+            <span class="menuIcon" aria-hidden="true"
+              ><i></i><i></i><i></i></span
+            ><span class="menuLabel">菜单</span>
+          </button>
+          <div class="title"><h1>模型台</h1></div>
+          <div class="topRight">
+            <div class="badge" id="serviceStatus" aria-label="Agent 状态"></div>
+          </div>
+        </header>
+        <div class="content">
+          <section id="currentSection" class="panelSection activeSection">
+            <header class="sectionHead">
+              <div>
+                <span class="sectionKicker">OVERVIEW</span>
+                <h2>当前模型</h2>
+                <p class="pageHint">
+                  按 Agent 查看当前中转和模型；配置切换后请重置会话或重启
+                  Gateway。
+                </p>
+              </div>
+              <button data-static-click="18">刷新状态</button>
+            </header>
+            <div id="current" class="current"></div>
+            <div class="hr"></div>
+            <h3>新建 Agent</h3>
+            <p class="muted">
+              可空白创建或克隆模型配置；聊天 Token 与 API 密钥不会被克隆。
+            </p>
+            <div class="row">
+              <input
+                id="newAgentName"
+                placeholder="名字，例如 agent4"
+                autocomplete="off"
+              /><select id="cloneFromAgent">
+                <option value="">空白新建</option></select
+              ><select id="newAgentScope">
+                <option value="system">系统级 systemd</option>
+                <option value="user">用户级 systemd</option>
+              </select>
+            </div>
+            <div class="actions">
+              <button
+                id="createAgentBtn"
+                class="primary"
+                data-static-click="19"
+              >
+                新建 Agent
+              </button>
+            </div>
+          </section>
+          <section id="workStatusSection" class="panelSection">
+            <header class="sectionHead">
+              <div>
+                <span class="sectionKicker">RUNTIME</span>
+                <h2>工作状态</h2>
+                <p class="pageHint">查看 Gateway、任务和聊天平台连接情况。</p>
+              </div>
+              <button data-static-click="20">刷新</button>
+            </header>
+            <div id="workStatusBox" class="workList"></div>
+          </section>
+          <section id="sessionResumeSection" class="panelSection">
+            <header class="sessPageHead">
+              <div>
+                <span class="sectionKicker">SESSIONS</span>
+                <h2>选上下文</h2>
+                <p class="pageHint">按 Agent 搜索并分页浏览上下文。</p>
+              </div>
+              <button data-static-click="21">刷新</button>
+            </header>
+            <div class="sessionToolbar">
+              <label
+                >Agent<select
+                  id="sessionAgentSelect"
+                  data-static-change="22"
+                ></select></label
+              ><label
+                >搜索<input
+                  id="sessionSearch"
+                  type="search"
+                  placeholder="标题、联系人、平台或模型"
+                  data-static-keydown="23" /></label
+              ><button data-static-click="24">搜索</button
+              ><label
+                >每页<select id="sessionPageSize" data-static-change="25">
+                  <option>10</option>
+                  <option selected>20</option>
+                  <option>30</option>
+                  <option>50</option>
+                </select></label
+              >
+            </div>
+            <div id="sessionResumeBox" class="sessList"></div>
+            <div id="sessionPager" class="sessionPager"></div>
+          </section>
+          <section id="addSection" class="panelSection">
+            <header class="sectionHead">
+              <div>
+                <span class="sectionKicker">PROVIDER</span>
+                <h2>添加中转站</h2>
+                <p class="pageHint">保存中转地址、接口模式与模型列表。</p>
+              </div>
+            </header>
+            <div class="form">
+              <div class="row">
+                <input id="addName" placeholder="名称，例如 3号abc" /><select
+                  id="addMode"
+                >
+                  <option value="chat_completions">
+                    OpenAI API（/v1/chat/completions）
+                  </option>
+                  <option value="anthropic_messages">
+                    Claude API（/v1/messages）
+                  </option>
+                  <option value="responses">
+                    OpenAI Responses（/v1/responses）
+                  </option>
+                  <option value="codex_responses">
+                    Codex Responses（/v1/responses）
+                  </option>
+                </select>
+              </div>
+              <input
+                id="addUrl"
+                placeholder="Base URL，例如 https://api.example.com/v1"
+              /><input
+                id="addKey"
+                type="password"
+                autocomplete="new-password"
+                placeholder="API Key（不会明文展示）"
+              />
+              <div class="row">
+                <input id="addModel" placeholder="默认模型" /><button
+                  id="fetchAddModelsBtn"
+                  data-static-click="26"
+                >
+                  一键获取模型
+                </button>
+              </div>
+              <textarea
+                id="addModels"
+                placeholder="其它模型，每行一个，可选"
+              ></textarea
+              ><button
+                id="addProviderBtn"
+                class="primary"
+                data-static-click="27"
+              >
+                添加并生成编号
+              </button>
+            </div>
+          </section>
+          <section id="providersSection" class="panelSection">
+            <header class="sectionHead">
+              <div>
+                <span class="sectionKicker">MODELS</span>
+                <h2>中转站与模型</h2>
+                <p class="pageHint">搜索、分页、测试和切换所有已配置模型。</p>
+              </div>
+            </header>
+            <div class="providerTools">
+              <input
+                id="providerSearch"
+                type="search"
+                placeholder="搜索名称、URL、模式、Key 预览或模型"
+                data-static-input="28"
+              /><select id="providerJump" data-static-change="29">
+                <option value="">直达中转站</option>
+              </select>
+              <div class="providerPager">
+                <button data-static-click="30">首页</button
+                ><button data-static-click="31">上一页</button
+                ><input
+                  id="providerPageInput"
+                  type="number"
+                  min="1"
+                  value="1"
+                  data-static-change="32"
+                  aria-label="页码"
+                /><button data-static-click="33">下一页</button
+                ><button data-static-click="34">末页</button
+                ><span id="providerPageInfo" class="muted"></span>
+              </div>
+            </div>
+            <div id="providerSummary" class="providerSummary"></div>
+            <div id="providers" class="providers"></div>
+          </section>
+          <section id="testSection" class="panelSection">
+            <header class="sectionHead">
+              <div>
+                <span class="sectionKicker">DIAGNOSTICS</span>
+                <h2>中转站测试</h2>
+                <p class="pageHint">测试不会改变当前模型配置。</p>
+              </div>
+            </header>
+            <div class="testbar">
+              <label
+                ><span class="k">测试消息</span
+                ><textarea id="testMessage">
+你好，请用一句话回复：测试成功</textarea></label
+              ><label
+                ><span class="k">选择范围</span
+                ><select id="testTarget">
+                  <option value="current">当前使用</option>
+                  <option value="all">测试全部</option>
+                </select></label
+              ><button id="runTestBtn" class="primary" data-static-click="35">
+                开始测试
+              </button>
+            </div>
+            <div class="actions">
+              <button id="testLogToggleBtn" data-static-click="36">
+                查看检测日志
+              </button>
+            </div>
+            <div id="testLog" class="testLog hidden">
+              <header class="testLogHead">
+                <b>检测日志</b>
+                <div class="actions">
+                  <button data-static-click="37">清空</button
+                  ><button data-static-click="38">收起</button>
+                </div>
+              </header>
+              <div id="testLogBody" class="testLogBody">
+                <div class="muted">等待开始检测...</div>
+              </div>
+            </div>
+            <div id="testResults" class="results"></div>
+          </section>
+          <section id="imageGenSection" class="panelSection">
+            <header class="sectionHead">
+              <div>
+                <span class="sectionKicker">IMAGE</span>
+                <h2>生图模型选择</h2>
+                <p class="pageHint">按 Agent 的当前中转获取并切换生图模型。</p>
+              </div>
+            </header>
+            <div id="imageGenBox" class="providers"></div>
+          </section>
+          <section id="chatToolsSection" class="panelSection">
+            <header class="sectionHead">
+              <div>
+                <span class="sectionKicker">CHANNELS</span>
+                <h2>聊天平台</h2>
+                <p class="pageHint">Secret 不回显；非空字段才会提交。</p>
+              </div>
+              <button data-static-click="39">刷新</button>
+            </header>
+            <div id="chatToolsBox" class="providers"></div>
+          </section>
+          <section id="agentToolsSection" class="panelSection">
+            <header class="sessPageHead">
+              <div>
+                <span class="sectionKicker">TOOLS</span>
+                <h2>Agent 工具</h2>
+                <p class="pageHint">保存启用能力后重启对应 Gateway 生效。</p>
+              </div>
+              <button data-static-click="40">刷新</button>
+            </header>
+            <div id="agentToolsBox" class="sessList"></div>
+          </section>
+          <section id="agentSkillsSection" class="panelSection">
+            <header class="sessPageHead">
+              <div>
+                <span class="sectionKicker">SKILLS</span>
+                <h2>Skills</h2>
+                <p class="pageHint">默认全部启用，关闭项按 Agent 保存。</p>
+              </div>
+              <button data-static-click="41">刷新</button>
+            </header>
+            <div id="agentSkillsBox" class="sessList"></div>
+          </section>
+          <section id="readableLogsSection" class="panelSection">
+            <header class="sectionHead">
+              <div>
+                <span class="sectionKicker">LOGS</span>
+                <h2>易懂日志</h2>
+                <p class="pageHint">易懂视图与原始 Gateway 日志并存。</p>
+              </div>
+              <button id="readableRefreshBtn" data-static-click="42">
+                刷新
+              </button>
+            </header>
+            <div class="readableToolbar">
+              <label
+                >Agent<select
+                  id="readableAgent"
+                  data-static-change="43"
+                ></select></label
+              ><label
+                >级别<select id="readableLevel" data-static-change="44">
+                  <option value="all">全部</option>
+                  <option value="error">只看异常</option>
+                  <option value="warning">异常与提醒</option>
+                  <option value="success">正常事件</option>
+                </select></label
+              ><label
+                >行数<select id="readableLines" data-static-change="45">
+                  <option value="80">最近 80 行</option>
+                  <option value="160" selected>最近 160 行</option>
+                  <option value="300">最近 300 行</option>
+                </select></label
+              >
+            </div>
+            <div
+              id="readableSummary"
+              class="readableSummary"
+              aria-live="polite"
+            ></div>
+            <div
+              id="readableLogs"
+              class="readableList"
+              aria-live="polite"
+            ></div>
+          </section>
+          <section id="commandsSection" class="panelSection">
+            <div class="commandEntry">
+              <div>
+                <span class="sectionKicker">COMMANDS</span>
+                <h2>快捷命令</h2>
+                <p class="muted">查看平台可用的斜杠命令和目标。</p>
+              </div>
+              <button class="primary" data-static-click="46">
+                查看快捷命令
+              </button>
+            </div>
+          </section>
+          <section id="settingsSection" class="panelSection">
+            <header class="settingsHero">
+              <div>
+                <span class="sectionKicker">SETTINGS</span>
+                <h2>设置</h2>
+                <p class="muted">
+                  安全、用量、服务层级、日志、配对和 Gateway 操作。
+                </p>
+              </div>
+            </header>
+            <div class="settingsGrid">
+              <section class="settingsGroup">
+                <div class="settingsGroupHead">
+                  <span class="settingsIcon">01</span>
+                  <div>
+                    <h3>API 使用量</h3>
+                    <p class="muted">24 小时、7 天及累计统计</p>
+                  </div>
+                </div>
+                <span id="usageSource" class="muted">点击按钮查看</span>
+                <div class="actions">
+                  <button id="usageToggleBtn" data-static-click="47">
+                    查看 API 使用量
+                  </button>
+                </div>
+                <div id="usage" class="usageGrid hidden"></div>
+              </section>
+              <section class="settingsGroup">
+                <div class="settingsGroupHead">
+                  <span class="settingsIcon">02</span>
+                  <div>
+                    <h3>面板安全</h3>
+                    <p class="muted">登录密码与访问保护</p>
+                  </div>
+                </div>
+                <p id="authHint" class="muted">正在读取设置</p>
+                <div class="form">
+                  <label class="settingSwitch"
+                    ><input id="authEnabled" type="checkbox" /><span
+                      class="switchTrack"
+                    ></span
+                    ><span>打开密码保护</span></label
+                  ><input
+                    id="authOldPassword"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="当前密码"
+                  /><input
+                    id="authNewPassword"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="新密码，至少 8 位"
+                  /><button
+                    id="saveAuthBtn"
+                    class="primary"
+                    data-static-click="48"
+                  >
+                    保存密码设置</button
+                  ><button class="danger" data-static-click="49">
+                    退出全部设备
+                  </button>
+                </div>
+              </section>
+              <section class="settingsGroup">
+                <div class="settingsGroupHead">
+                  <span class="settingsIcon">03</span>
+                  <div>
+                    <h3>Gateway 服务</h3>
+                    <p class="muted">服务层级与原始日志</p>
+                  </div>
+                </div>
+                <div class="settingFields">
+                  <label
+                    >目标 Agent<select
+                      id="pairingAgent"
+                      data-static-change="50"
+                    ></select></label
+                  ><label
+                    >服务层级<select id="serviceScope">
+                      <option value="auto">自动识别</option>
+                      <option value="system">系统级 systemd</option>
+                      <option value="user">用户级 systemd</option>
+                    </select></label
+                  >
+                </div>
+                <div class="actions">
+                  <button id="saveScopeBtn" data-static-click="51">
+                    保存服务层级</button
+                  ><button id="loadGatewayLogsBtn" data-static-click="52">
+                    查看原始日志
+                  </button>
+                </div>
+                <pre id="gatewayLogs" class="testLogBody hidden"></pre>
+                <p id="serviceScopeHint" class="settingsNote">
+                  自动识别会优先使用已存在的系统级 Unit。
+                </p>
+              </section>
+              <section class="settingsGroup">
+                <div class="settingsGroupHead">
+                  <span class="settingsIcon">04</span>
+                  <div>
+                    <h3>批准聊天配对</h3>
+                    <p class="muted">批准一次性配对码</p>
+                  </div>
+                </div>
+                <div class="settingFields">
+                  <label
+                    >聊天平台<select
+                      id="pairingPlatform"
+                      data-static-change="53"
+                    >
+                      <option value="feishu">飞书</option>
+                      <option value="telegram">Telegram</option>
+                      <option value="discord">Discord</option>
+                      <option value="slack">Slack</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="signal">Signal</option>
+                      <option value="weixin">微信</option>
+                    </select></label
+                  ><label
+                    >配对码<input
+                      id="pairingCode"
+                      maxlength="16"
+                      autocomplete="off"
+                      placeholder="例如 FAWJ3QYM"
+                      data-static-input="54"
+                      data-static-keydown="55"
+                  /></label>
+                </div>
+                <button
+                  id="approvePairingBtn"
+                  class="primary"
+                  data-static-click="56"
+                >
+                  批准配对
+                </button>
+                <p id="pairingHint" class="settingsNote">
+                  只批准你确认身份的用户。
+                </p>
+              </section>
+              <section class="settingsGroup settingsDanger">
+                <div class="settingsGroupHead">
+                  <span class="settingsIcon">05</span>
+                  <div>
+                    <h3>服务操作</h3>
+                    <p class="muted">配置刷新、安装与重启</p>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button data-static-click="57">重建快捷命令</button
+                  ><button data-static-click="58">刷新面板状态</button
+                  ><select id="restartAgent"></select
+                  ><button
+                    id="installGatewayBtn"
+                    class="primary hidden"
+                    data-static-click="59"
+                  >
+                    安装并启动 Gateway</button
+                  ><button
+                    id="restartGatewayBtn"
+                    class="danger"
+                    data-static-click="60"
+                  >
+                    重启 Gateway
+                  </button>
+                </div>
+                <p id="gatewayActionHint" class="settingsNote">
+                  重启会中断正在运行的任务。
+                </p>
+              </section>
+              <section class="settingsGroup">
+                <div class="settingsGroupHead">
+                  <span class="settingsIcon">06</span>
+                  <div>
+                    <h3>面板在线更新</h3>
+                    <p class="muted">
+                      当前版本 v1.1.0 · 从 GitHub 获取已发布的最新代码
+                    </p>
+                  </div>
+                </div>
+                <p id="panelUpdateHint" class="settingsNote">
+                  点击检查更新；更新时会备份当前版本并自动重启。
+                </p>
+                <div class="actions">
+                  <button id="checkPanelUpdateBtn" data-static-click="71">
+                    检查更新</button
+                  ><button
+                    id="runPanelUpdateBtn"
+                    class="primary hidden"
+                    data-static-click="72"
+                  >
+                    立即更新
+                  </button>
+                </div>
+              </section>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+    <div id="mimoModal" class="modal hidden">
+      <div class="modalBackdrop" data-static-click="61"></div>
+      <section
+        class="modalPanel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mimoTitle"
+      >
+        <header class="modalHead">
+          <div>
+            <h2 id="mimoTitle">小米 MiMo 语音工具</h2>
+            <p class="muted">ASR 识别与 TTS 合成。</p>
+          </div>
+          <button class="ghost" data-static-click="62">关闭</button>
+        </header>
+        <div class="audioGrid">
+          <section class="audioBox">
+            <h3>ASR 语音识别</h3>
+            <div class="form">
+              <input
+                id="asrFile"
+                class="file"
+                type="file"
+                accept="audio/mpeg,audio/mp3,audio/wav,.mp3,.wav"
+              /><select id="asrLang">
+                <option value="auto">自动识别语言</option>
+                <option value="zh">中文</option>
+                <option value="en">英文</option></select
+              ><button id="asrBtn" class="primary" data-static-click="63">
+                开始识别
+              </button>
+            </div>
+            <div id="asrResult" class="results"></div>
+          </section>
+          <section class="audioBox">
+            <h3>TTS 语音合成</h3>
+            <div class="form">
+              <select id="ttsModel">
+                <option value="mimo-v2.5-tts">mimo-v2.5-tts</option>
+                <option value="mimo-v2.5-tts-voicedesign">
+                  mimo-v2.5-tts-voicedesign
+                </option>
+              </select>
+              <div class="row">
+                <select id="ttsVoice">
+                  <option>冰糖</option>
+                  <option>茉莉</option>
+                  <option>苏打</option>
+                  <option>白桦</option>
+                  <option>Mia</option>
+                  <option>Chloe</option>
+                  <option>Milo</option>
+                  <option>Dean</option>
+                  <option>mimo_default</option></select
+                ><select id="ttsFormat">
+                  <option value="wav">wav</option>
+                  <option value="mp3">mp3</option>
+                </select>
+              </div>
+              <textarea id="ttsStyle" placeholder="风格提示，可选">
+用温柔、自然、稍微活泼一点的中文女声朗读。</textarea
+              ><textarea id="ttsText" placeholder="要朗读的文字">
+你好，我是小米 MiMo 语音合成模型，测试成功。</textarea
+              ><button id="ttsBtn" class="primary" data-static-click="64">
+                生成语音
+              </button>
+            </div>
+            <div id="ttsResult" class="results"></div>
+          </section>
+        </div>
+      </section>
     </div>
-  </div>
-</main>
-<div id="mimoModal" class="modal hidden"><div class="modalBackdrop" data-static-click="61"></div><section class="modalPanel" role="dialog" aria-modal="true" aria-labelledby="mimoTitle"><header class="modalHead"><div><h2 id="mimoTitle">小米 MiMo 语音工具</h2><p class="muted">ASR 识别与 TTS 合成。</p></div><button class="ghost" data-static-click="62">关闭</button></header><div class="audioGrid"><section class="audioBox"><h3>ASR 语音识别</h3><div class="form"><input id="asrFile" class="file" type="file" accept="audio/mpeg,audio/mp3,audio/wav,.mp3,.wav"><select id="asrLang"><option value="auto">自动识别语言</option><option value="zh">中文</option><option value="en">英文</option></select><button id="asrBtn" class="primary" data-static-click="63">开始识别</button></div><div id="asrResult" class="results"></div></section><section class="audioBox"><h3>TTS 语音合成</h3><div class="form"><select id="ttsModel"><option value="mimo-v2.5-tts">mimo-v2.5-tts</option><option value="mimo-v2.5-tts-voicedesign">mimo-v2.5-tts-voicedesign</option></select><div class="row"><select id="ttsVoice"><option>冰糖</option><option>茉莉</option><option>苏打</option><option>白桦</option><option>Mia</option><option>Chloe</option><option>Milo</option><option>Dean</option><option>mimo_default</option></select><select id="ttsFormat"><option value="wav">wav</option><option value="mp3">mp3</option></select></div><textarea id="ttsStyle" placeholder="风格提示，可选">用温柔、自然、稍微活泼一点的中文女声朗读。</textarea><textarea id="ttsText" placeholder="要朗读的文字">你好，我是小米 MiMo 语音合成模型，测试成功。</textarea><button id="ttsBtn" class="primary" data-static-click="64">生成语音</button></div><div id="ttsResult" class="results"></div></section></div></section></div>
-<div id="commandsModal" class="modal hidden"><div class="modalBackdrop" data-static-click="65"></div><section class="modalPanel commandPage" role="dialog" aria-modal="true" aria-labelledby="commandsTitle"><header class="modalHead"><div><h2 id="commandsTitle">快捷命令</h2><p class="muted">命令、说明与目标。</p></div><button class="ghost" data-static-click="66">关闭</button></header><div id="commands" class="cmds"></div></section></div>
-<div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><div class="modalBackdrop" data-static-click="67"></div><section class="modalPanel confirmPanel"><div class="confirmMark">!</div><h2 id="confirmTitle">确认操作</h2><p id="confirmMessage" class="muted"></p><div class="confirmActions"><button data-static-click="68">取消</button><button id="confirmOkBtn" class="primary" data-static-click="69">确认</button></div></section></div>
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script type="module" src="js/app.js?v=status-bootstrap-1"></script>
-</body>
+    <div id="commandsModal" class="modal hidden">
+      <div class="modalBackdrop" data-static-click="65"></div>
+      <section
+        class="modalPanel commandPage"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="commandsTitle"
+      >
+        <header class="modalHead">
+          <div>
+            <h2 id="commandsTitle">快捷命令</h2>
+            <p class="muted">命令、说明与目标。</p>
+          </div>
+          <button class="ghost" data-static-click="66">关闭</button>
+        </header>
+        <div id="commands" class="cmds"></div>
+      </section>
+    </div>
+    <div
+      id="confirmModal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirmTitle"
+    >
+      <div class="modalBackdrop" data-static-click="67"></div>
+      <section class="modalPanel confirmPanel">
+        <div class="confirmMark">!</div>
+        <h2 id="confirmTitle">确认操作</h2>
+        <p id="confirmMessage" class="muted"></p>
+        <div class="confirmActions">
+          <button data-static-click="68">取消</button
+          ><button id="confirmOkBtn" class="primary" data-static-click="69">
+            确认
+          </button>
+        </div>
+      </section>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="js/app.js?v=status-bootstrap-1"></script>
+  </body>
 </html>
