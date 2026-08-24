@@ -1,33 +1,93 @@
 # Hermes Model Panel
 
-English | [中文](README.md)
+[![Version](https://img.shields.io/badge/version-v1.1.0-6f8cff)](https://github.com/17sho/hermes-model-panel/releases)
+[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520-339933?logo=nodedotjs&logoColor=white)](package.json)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Hermes Agent](https://img.shields.io/badge/for-Hermes%20Agent-111827)](https://github.com/NousResearch/hermes-agent)
 
-Hermes Model Panel is a framework-free Chinese administration UI for Hermes Agent models, providers, sessions, Skills, chat platforms, and Gateway status. It keeps the existing 13-page interface and protects administrative operations with server-side authentication, CSRF validation, and atomic configuration writes.
+[中文](README.md) · **English**
 
-## Safe access
+A responsive web control panel for an existing [Hermes Agent](https://github.com/NousResearch/hermes-agent) installation. Manage models, OpenAI-compatible relays, Agent profiles, chat platforms, Skills, tools, sessions, and Gateway services from one UI.
 
-The server listens on `127.0.0.1` by default, which is appropriate for local access or a Caddy reverse proxy. Setting `HOST=0.0.0.0` listens on every interface and enables LAN access; pair this with host firewall rules that allow only trusted subnets. Never expose a passwordless panel directly to the public internet.
+> This panel does not install Hermes or provide API keys and bot tokens. Install and configure Hermes Agent first.
 
-Public access requires a strong administrator password and a persistent session secret. Caddy is recommended for HTTPS, access logging, and additional access controls. See `samples/hermes-model-panel.env.example` for variable names, and never commit real environment files or secrets.
+![Model and Agent management](docs/images/panel-models.png)
 
-## Install and run
+## Features
+
+| Area                 | Capabilities                                                                        |
+| -------------------- | ----------------------------------------------------------------------------------- |
+| Models and relays    | Add OpenAI-compatible relays, fetch models, switch active models, test availability |
+| Agents / Profiles    | Create and remove Profiles with independent model and service settings              |
+| Chat platforms       | Manage Telegram, Weixin, Discord, WhatsApp, Slack, and Feishu                       |
+| Tools and Skills     | Inspect and switch toolsets per Agent, manage Skills                                |
+| Sessions and context | Inspect work status, resume historical context, generate quick commands             |
+| Gateway              | Inspect status and raw logs; install, start, stop, or restart services              |
+| Security             | Server-side login, Session cookies, CSRF validation, atomic config writes           |
+| Online updates       | Check GitHub revisions, install in the background, automatically roll back failures |
+| Responsive UI        | Persistent desktop sidebar, mobile drawer, light and dark themes                    |
+
+<p align="center">
+  <img src="docs/images/panel-platforms.png" width="49%" alt="Chat platform management">
+  <img src="docs/images/panel-tools.png" width="49%" alt="Agent tool management">
+</p>
+
+## Quick installation
+
+### Requirements
+
+- Linux with systemd
+- Hermes Agent already installed with `~/.hermes/config.yaml`
+- Node.js 20+, npm, rsync, and OpenSSL
+- root or sudo access
+
+```bash
+git clone https://github.com/17sho/hermes-model-panel.git
+cd hermes-model-panel
+sudo bash install.sh
+```
+
+The installer checks the Hermes configuration, installs the panel at `/opt/hermes-model-panel`, installs production dependencies, creates `/etc/hermes-model-panel.env` on first run, enables the systemd service, and prints the local URL.
+
+The server listens on `127.0.0.1:3010` by default. For LAN access, explicitly use:
+
+```bash
+sudo HOST=0.0.0.0 AUTH_DISABLED=0 bash install.sh
+sudo ufw allow from 192.168.0.0/16 to any port 3010 proto tcp
+```
+
+For public access, keep password authentication enabled and terminate HTTPS through Caddy or Nginx. Never expose a passwordless panel directly to the Internet.
+
+## Manual run
 
 ```bash
 npm ci
 npm start
 ```
 
-For production, use `systemd/hermes-model-panel.service` as a reference, install the project at `/opt/hermes-model-panel`, and place the environment file at `/etc/hermes-model-panel.env`. An administrator should perform daemon-reload and restart during a maintenance window after unit changes; repository tests never restart services.
+Production examples:
+
+- [`samples/hermes-model-panel.env.example`](samples/hermes-model-panel.env.example)
+- [`systemd/hermes-model-panel.service`](systemd/hermes-model-panel.service)
+- [`caddy/hermes-model-panel.caddy.example`](caddy/hermes-model-panel.caddy.example)
 
 ## Online updates
 
-The Settings page can check the GitHub `main` branch and install updates. The updater pins the reviewed commit SHA, downloads a source archive, installs production dependencies and runs syntax checks in a temporary directory, atomically replaces `/opt/hermes-model-panel`, and restarts the service. A failed startup restores the previous release. Environment files, Hermes configuration, Session databases, and panel metadata live outside the code directory and are not overwritten.
+After the initial v1.1.0 deployment, open **Settings → Panel online update** to check GitHub `main`. The updater pins the target commit SHA, installs dependencies and validates code in a temporary directory, replaces the program directory, and restarts the service. A failed startup restores the previous release.
 
-For the first updater-enabled deployment, install the release containing `scripts/update-panel.sh` and run `chmod 0755 /opt/hermes-model-panel/scripts/update-panel.sh`. After that, test locally, commit, and push to GitHub `main`; the server can update from **Settings → Panel online update**. Override the source with `PANEL_UPDATE_REPO` and `PANEL_UPDATE_BRANCH`.
+Updates replace code only. They preserve the environment file, Hermes configuration and Profiles, Session databases, panel metadata, and credentials.
 
-## Backup and restore
+> The current updater targets GitHub commit SHAs. For public production systems, update only to reviewed stable revisions.
 
-Before changing Hermes YAML, the panel creates timestamped `.bak-*` files beside the configuration and retains the latest 10. Keep separate deployment backups of the Hermes configuration tree, Session SQLite databases, and panel metadata. Before restoring, stop writers, preserve the current files, and restore a backup made by a compatible version. Do not overwrite a live SQLite database.
+## Security notes
+
+- The service listens on `127.0.0.1` by default.
+- Public deployments require a strong administrator password and persistent `SESSION_SECRET`.
+- Stored secrets are not echoed back in plaintext by the UI.
+- Before writing Hermes YAML, the panel creates timestamped `.bak-*` files and retains the latest ten.
+- The current systemd service remains root-compatible because Hermes configuration, Profiles, logs, and service controls need real permission testing before migration to a dedicated user.
+
+Never commit real `.env` files, API keys, bot tokens, cookies, databases, or production configuration.
 
 ## Development and testing
 
@@ -35,13 +95,14 @@ Before changing Hermes YAML, the panel creates timestamped `.bak-*` files beside
 npm ci
 python3 -m pip install -r requirements-dev.txt
 npm run check
-npm audit --omit=dev
 npx playwright install chromium
 npm run test:e2e
 ```
 
-Playwright runs against a read-only fixture server whose non-GET APIs return 405, so E2E tests cannot write production configuration or business data. `npm run check` includes JS/Python syntax checks, ESLint, Stylelint, Ruff, format checks, and `node:test` regressions.
+`npm run check` covers Node/Python syntax, ESLint, Stylelint, Ruff, Prettier, and `node:test`. Playwright runs against a read-only fixture server and cannot mutate production configuration.
 
-## systemd least-privilege roadmap
+## License
 
-The unit intentionally retains `User=root` until every real path used for model configuration, Agent profiles, Session databases, systemd management, and log access has been exercised. The current safe hardening is limited to `NoNewPrivileges`, `PrivateTmp`, `UMask=0077`, `RestrictSUIDSGID`, and `LockPersonality`. A future migration should inventory and verify every read, write, and command path, introduce a dedicated user, and then add `ProtectHome`, `ProtectSystem`, and precise `ReadWritePaths` incrementally with full regression and real management-flow testing after each step.
+[MIT](LICENSE)
+
+If this project helps you, a **Star** is appreciated. Issues and pull requests are welcome.
