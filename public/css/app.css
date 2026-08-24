@@ -16,8 +16,7 @@ button.ghost{background:transparent}
 button.ghostSm,button.small{min-height:var(--control-sm);padding:var(--sp-1) var(--sp-3);font-size:var(--fs-sm)}button.ghostSm{background:transparent}
 input,select,textarea{width:100%;min-width:0;min-height:var(--control);padding:var(--sp-2) var(--sp-3);border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--field);color:var(--text);outline:0;transition:border-color var(--motion-fast),box-shadow var(--motion-fast),background-color var(--motion-base)}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
-select{cursor:pointer}
-select:hover{border-color:var(--line-strong)}
+select{padding-right:2.75rem;cursor:pointer;appearance:none;-webkit-appearance:none;background-color:var(--field);background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%),linear-gradient(to right,var(--line),var(--line));background-position:calc(100% - 1.125rem) calc(50% - 2px),calc(100% - .8125rem) calc(50% - 2px),calc(100% - 2.25rem) 50%;background-size:.375rem .375rem,.375rem .375rem,1px 1.5rem;background-repeat:no-repeat;text-overflow:ellipsis;white-space:nowrap}select:hover{border-color:var(--line-strong);background-color:var(--hover)}select:focus{background-color:var(--field)}select:disabled{cursor:not-allowed;background-color:var(--hover);color:var(--muted);opacity:.7}select option{background:var(--surface);color:var(--text)}
 textarea{min-height:6rem;resize:vertical}
 input[type=checkbox]{width:auto;min-height:0;accent-color:var(--accent)}
 input[type=file]{padding:4px 6px}
