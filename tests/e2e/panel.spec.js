@@ -47,6 +47,31 @@ for (const width of [320, 390, 900, 1024, 1100]) {
   });
 }
 
+test('面板安全保存按钮会提交密码与开关设置', async ({ page }) => {
+  const requests = [];
+  await page.route('**/api/{change-password,auth-settings}', async (route) => {
+    const request = route.request();
+    if (request.method() === 'GET') return route.continue();
+    requests.push({ path: new URL(request.url()).pathname, body: request.postDataJSON() });
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, password_enabled: true, password_set: true, csrf_token: 'fixture-token' }),
+    });
+  });
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.locator('[data-target="settingsSection"]').click();
+  await page.locator('.settingSwitch').click();
+  await page.locator('#authNewPassword').fill('example-pass-123');
+  await page.locator('#saveAuthBtn').click();
+  await expect.poll(() => requests.length).toBe(2);
+  expect(requests.map((item) => item.path)).toEqual(['/api/change-password', '/api/auth-settings']);
+  expect(requests[0].body.new_password).toBe('example-pass-123');
+  expect(requests[1].body.password_enabled).toBe(true);
+  await expect(page.locator('#toast')).toContainText('已打开密码保护');
+  expect(errors).toEqual([]);
+});
+
 test('主要动态 DOM 的恶意属性值不能形成事件处理器', async ({ page }) => {
   await page.locator('[data-target="providersSection"]').click();
   await expect(page.locator('#providers')).toContainText('onclick');
