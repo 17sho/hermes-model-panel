@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import os
 import re
 import shutil
 import sys
@@ -68,7 +67,7 @@ def main():
         dest_dir.rename(dest)
     except OSError:
         shutil.move(str(dest_dir), str(dest))
-    print(json.dumps({"ok": True, "archived": str(dest), "name": name}, ensure_ascii=False))
+    print(json.dumps({"ok": True, "archived": str(dest), "original": str(dest_dir), "name": name}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

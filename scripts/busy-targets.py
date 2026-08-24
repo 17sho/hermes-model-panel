@@ -5,6 +5,7 @@ import sys
 
 db, limit = sys.argv[1], int(sys.argv[2])
 con = sqlite3.connect("file:%s?mode=ro" % db, uri=True)
+con.execute("PRAGMA busy_timeout=5000")
 con.row_factory = sqlite3.Row
 rows = con.execute(
     """SELECT id, parent_session_id, source, display_name, session_key, chat_type, chat_id, origin_json, title, started_at,

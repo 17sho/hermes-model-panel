@@ -4,7 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "syntax": "node --check server.js && node --check public/js/app.js && python3 -m compileall -q scripts",
+    "lint": "eslint server.js src public/js tests && stylelint public/css/app.css && python3 -m ruff check scripts",
+    "format:check": "prettier --check package.json eslint.config.js playwright.config.js src tests/*.test.mjs README.md README.en.md && python3 -m ruff format --check scripts",
+    "test": "node --test tests/*.test.mjs",
+    "test:e2e": "playwright test",
+    "check": "npm run syntax && npm run lint && npm run format:check && npm test"
   },
   "dependencies": {
     "@koa/router": "^12.0.1",
@@ -12,5 +18,12 @@
     "koa-bodyparser": "^4.4.1",
     "koa-static": "^5.0.0",
     "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "eslint": "^10.9.0",
+    "prettier": "^3.9.6",
+    "stylelint": "^17.14.1",
+    "stylelint-config-standard": "^40.0.0"
   }
 }

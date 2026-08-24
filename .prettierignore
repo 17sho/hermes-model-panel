@@ -1,0 +1,5 @@
+server.js
+public/js/app.js
+public/css/app.css
+package-lock.json
+tests/audit-regression.mjs
