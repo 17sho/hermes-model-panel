@@ -2413,6 +2413,11 @@ app.use(async (ctx, next) => {
 });
 app.use(router.routes());
 app.use(router.allowedMethods());
+app.use(async (ctx, next) => {
+  await next();
+  if (ctx.path === '/' || ctx.path.endsWith('.html')) ctx.set('Cache-Control', 'no-store');
+  else if (/\.(?:js|css)$/.test(ctx.path)) ctx.set('Cache-Control', 'public, max-age=300, must-revalidate');
+});
 app.use(serve(PUBLIC_DIR));
 app.use(async (ctx) => {
   if (ctx.method === 'GET') ctx.type = 'html', ctx.body = fssync.createReadStream(path.join(PUBLIC_DIR, 'index.html'));
