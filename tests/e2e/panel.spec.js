@@ -89,6 +89,18 @@ for (const width of [320, 390]) {
     expect(Math.abs(geometry.panelLeft - geometry.panelRight)).toBeLessThanOrEqual(1);
     expect(geometry.panelLeft).toBeGreaterThanOrEqual(12);
     expect(geometry.panelRight).toBeGreaterThanOrEqual(12);
+    const sections = page.locator('.sideNav button[data-target]');
+    for (let index = 0; index < (await sections.count()); index += 1) {
+      const target = await sections.nth(index).getAttribute('data-target');
+      await sections.nth(index).evaluate((element) => element.click());
+      const escaped = await page.locator(`#${target}`).evaluate((root) =>
+        [root, ...root.querySelectorAll('*')].filter((element) => {
+          const rect = element.getBoundingClientRect();
+          return rect.left < -1 || rect.right > window.innerWidth + 1;
+        }).length,
+      );
+      expect(escaped, `${target} 存在越出视口的控件`).toBe(0);
+    }
   });
 }
 
