@@ -24,9 +24,13 @@ test('13 页导航保留 SVG，移动菜单可重复开关', async ({ page }) =>
   }
 });
 
-test('主题支持切换与持久化', async ({ page }) => {
+test('主题入口位于菜单底部并支持切换与持久化', async ({ page }) => {
   const root = page.locator('html');
-  await page.locator('#themeToggle').click();
+  const theme = page.locator('#themeToggle');
+  await expect(theme).toBeVisible();
+  await expect(theme.locator('.themeLabel')).toHaveText(/日间模式|夜间模式/);
+  await expect(theme.evaluate((el) => el.closest('.sideFoot')?.contains(document.querySelector('#logoutBtn')))).resolves.toBe(true);
+  await theme.click();
   const selected = await root.getAttribute('data-theme');
   expect(['light', 'dark']).toContain(selected);
   expect(await page.evaluate(() => window.localStorage.getItem('hermes-theme'))).toBe(selected);

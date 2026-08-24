@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>模型台 · Hermes</title>
 <meta name="theme-color" content="#f4f6f8">
-<script>try{const t=localStorage.getItem('hermes-theme');const d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.style.colorScheme=d?'dark':'light';document.querySelector('meta[name="theme-color"]').content=d?'#11161c':'#f4f6f8'}catch{}</script>
-<link rel="stylesheet" href="css/app.css?v=theme-motion-1">
+<script>try{const t=localStorage.getItem('hermes-theme'),d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches),v=d?'dark':'light';document.documentElement.dataset.theme=v;document.documentElement.style.colorScheme=v;document.querySelector('meta[name="theme-color"]').content=d?'#11161c':'#f4f6f8'}catch{}</script>
+<link rel="stylesheet" href="css/app.css?v=theme-menu-2">
 </head>
 <body>
 <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -43,10 +43,10 @@
       <button type="button" data-target="commandsSection" data-static-click="14"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg></span>快捷命令</button>
       <button type="button" data-target="settingsSection" data-static-click="15"><span class="navGlyph" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.5 1A7 7 0 0 0 15 6l-.4-3h-4L10 6a7 7 0 0 0-1.5 1L6 6 4 9.5 6 11a7 7 0 0 0 0 2l-2 1.5L6 18l2.5-1A7 7 0 0 0 10 18l.5 3h4l.5-3a7 7 0 0 0 1.5-1l2.5 1 2-3.5-2-1.5a7 7 0 0 0 0-1Z"/></svg></span>设置</button>
     </nav>
-    <footer class="sideFoot"><button id="logoutBtn" class="logoutNav" type="button" data-static-click="16"><svg class="logoutIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/></svg><span>退出登录</span></button></footer>
+    <footer class="sideFoot"><button id="themeToggle" class="themeNav" type="button" data-static-click="70" aria-label="切换夜间模式" title="切换夜间模式"><span class="themeIcon" aria-hidden="true">◐</span><span class="themeLabel">夜间模式</span></button><button id="logoutBtn" class="logoutNav" type="button" data-static-click="16"><svg class="logoutIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/></svg><span>退出登录</span></button></footer>
   </aside>
   <div class="workspace">
-    <header class="top"><button id="mobileMenuBtn" class="mobileMenuBtn" type="button" aria-controls="sideMenu" aria-expanded="false" data-static-click="17">菜单</button><div class="title"><h1>模型台</h1></div><div class="topRight"><button id="themeToggle" class="themeToggle" type="button" data-static-click="70" aria-label="切换夜间模式" title="切换夜间模式">◐</button><div class="badge" id="serviceStatus" aria-label="Agent 状态"></div></div></header>
+    <header class="top"><button id="mobileMenuBtn" class="mobileMenuBtn" type="button" aria-controls="sideMenu" aria-expanded="false" data-static-click="17">菜单</button><div class="title"><h1>模型台</h1></div><div class="topRight"><div class="badge" id="serviceStatus" aria-label="Agent 状态"></div></div></header>
     <div class="content">
       <section id="currentSection" class="panelSection activeSection"><header class="sectionHead"><div><span class="sectionKicker">OVERVIEW</span><h2>当前模型</h2><p class="pageHint">按 Agent 查看当前中转和模型；配置切换后请重置会话或重启 Gateway。</p></div><button data-static-click="18">刷新状态</button></header><div id="current" class="current"></div><div class="hr"></div><h3>新建 Agent</h3><p class="muted">可空白创建或克隆模型配置；聊天 Token 与 API 密钥不会被克隆。</p><div class="row"><input id="newAgentName" placeholder="名字，例如 agent4" autocomplete="off"><select id="cloneFromAgent"><option value="">空白新建</option></select><select id="newAgentScope"><option value="system">系统级 systemd</option><option value="user">用户级 systemd</option></select></div><div class="actions"><button id="createAgentBtn" class="primary" data-static-click="19">新建 Agent</button></div></section>
       <section id="workStatusSection" class="panelSection"><header class="sectionHead"><div><span class="sectionKicker">RUNTIME</span><h2>工作状态</h2><p class="pageHint">查看 Gateway、任务和聊天平台连接情况。</p></div><button data-static-click="20">刷新</button></header><div id="workStatusBox" class="workList"></div></section>
@@ -74,6 +74,6 @@
 <div id="commandsModal" class="modal hidden"><div class="modalBackdrop" data-static-click="65"></div><section class="modalPanel commandPage" role="dialog" aria-modal="true" aria-labelledby="commandsTitle"><header class="modalHead"><div><h2 id="commandsTitle">快捷命令</h2><p class="muted">命令、说明与目标。</p></div><button class="ghost" data-static-click="66">关闭</button></header><div id="commands" class="cmds"></div></section></div>
 <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><div class="modalBackdrop" data-static-click="67"></div><section class="modalPanel confirmPanel"><div class="confirmMark">!</div><h2 id="confirmTitle">确认操作</h2><p id="confirmMessage" class="muted"></p><div class="confirmActions"><button data-static-click="68">取消</button><button id="confirmOkBtn" class="primary" data-static-click="69">确认</button></div></section></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script type="module" src="js/app.js?v=theme-motion-1"></script>
+<script type="module" src="js/app.js?v=theme-menu-2"></script>
 </body>
 </html>

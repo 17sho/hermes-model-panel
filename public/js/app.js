@@ -96,7 +96,7 @@ installStaticEventHandlers();
 const THEME_KEY='hermes-theme';
 const THEME_MEDIA=window.matchMedia('(prefers-color-scheme:dark)');
 function preferredTheme(){const saved=window.localStorage.getItem(THEME_KEY);return saved==='dark'||saved==='light'?saved:(THEME_MEDIA.matches?'dark':'light')}
-function applyTheme(theme){const value=theme==='dark'?'dark':'light';document.documentElement.dataset.theme=value;document.documentElement.style.colorScheme=value;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',value==='dark'?'#11161c':'#f4f6f8');const btn=$('themeToggle');if(btn){btn.textContent=value==='dark'?'☀':'◐';btn.setAttribute('aria-label',value==='dark'?'切换日间模式':'切换夜间模式');btn.title=btn.getAttribute('aria-label')}}
+function applyTheme(theme){const value=theme==='dark'?'dark':'light';document.documentElement.dataset.theme=value;document.documentElement.style.colorScheme=value;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',value==='dark'?'#11161c':'#f4f6f8');const btn=$('themeToggle');if(btn){const label=value==='dark'?'日间模式':'夜间模式';const icon=btn.querySelector('.themeIcon');const text=btn.querySelector('.themeLabel');if(icon)icon.textContent=value==='dark'?'☀':'◐';if(text)text.textContent=label;btn.setAttribute('aria-label','切换'+label);btn.title='切换'+label}}
 function toggleTheme(){const next=document.documentElement.dataset.theme==='dark'?'light':'dark';window.localStorage.setItem(THEME_KEY,next);applyTheme(next)}
 applyTheme(preferredTheme());
 const syncSystemTheme=()=>{if(!window.localStorage.getItem(THEME_KEY))applyTheme(THEME_MEDIA.matches?'dark':'light')};
