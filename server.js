@@ -1110,8 +1110,14 @@ router.post('/auth-settings', async (ctx) => {
 
 router.post('/logout-all', async (ctx) => {
   await rotateSessionVersion();
+  if (AUTH_DISABLED) {
+    const token = makeToken();
+    ctx.cookies.set(COOKIE_NAME, token, cookieOptions(ctx));
+    ctx.body = { ...authPublicStatus(), csrf_token: tokenPayload(token).csrf };
+    return;
+  }
   ctx.cookies.set(COOKIE_NAME, '', cookieOptions(ctx, { maxAge: 0 }));
-  ctx.body = { ok: true };
+  ctx.body = authPublicStatus();
 });
 
 router.get('/health', async (ctx) => { ctx.body = { ok: true }; });

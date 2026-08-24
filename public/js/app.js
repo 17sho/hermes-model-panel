@@ -224,7 +224,7 @@ async function saveAuthSettings(sourceButton){
   finally{if(btn){btn.dataset.busy=''; btn.disabled=false}}
 }
 async function logout(){if(!await askConfirm('确定退出模型台？'))return;try{await api('/logout',{method:'POST',body:'{}'});showLogin();toast('已退出')}catch(e){toast(e.message)}}
-async function logoutAll(sourceButton){if(!await askConfirm('确定让全部设备的登录立即失效？'))return;try{await api('/logout-all',{method:'POST',body:'{}',sourceButton});invalidateClientSession()}catch(e){toast(e.message)}}
+async function logoutAll(sourceButton){if(!await askConfirm('确定让全部设备的登录立即失效？'))return;try{const result=await api('/logout-all',{method:'POST',body:'{}',sourceButton});if(result.password_enabled){invalidateClientSession();return}store.csrfToken=String(result.csrf_token||'');toast('全部旧设备会话已退出，本机无需密码可继续使用')}catch(e){toast(e.message)}}
 
 function imageModelsFor(agentId, current){
   const live=window.IMAGE_MODELS&&window.IMAGE_MODELS[agentId];
