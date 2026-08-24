@@ -62,6 +62,9 @@ test('面板安全保存按钮会提交密码与开关设置', async ({ page }) 
   page.on('pageerror', (error) => errors.push(error.message));
   await page.locator('[data-target="settingsSection"]').click();
   await page.locator('.settingSwitch').click();
+  await page.locator('#saveAuthBtn').click();
+  await expect(page.locator('#toast')).toContainText('必须输入至少 8 位的新密码');
+  expect(requests).toEqual([]);
   await page.locator('#authNewPassword').fill('example-pass-123');
   await page.locator('#saveAuthBtn').click();
   await expect.poll(() => requests.length).toBe(2);

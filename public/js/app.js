@@ -214,10 +214,12 @@ async function saveAuthSettings(sourceButton){
     const enabled=!!$('authEnabled')?.checked;
     const old_password=String($('authOldPassword')?.value||'');
     const new_password=String($('authNewPassword')?.value||'');
+    if(enabled&&!new_password)throw new Error('打开密码保护时必须输入至少 8 位的新密码');
+    if(enabled&&new_password.length<8)throw new Error('新密码至少 8 位');
     if(new_password){
       const changed=await api('/change-password',{method:'POST',body:JSON.stringify({old_password,new_password})});applyAuthSettings(changed);
     }
-    const s=await api('/auth-settings',{method:'POST',body:JSON.stringify({password_enabled:enabled})});
+    const s=await api('/auth-settings',{method:'POST',body:JSON.stringify({password_enabled:enabled,new_password:enabled?new_password:''})});
     applyAuthSettings(s);
     toast(enabled?'已打开密码保护':'已关闭密码保护');
   }catch(e){toast(e.message)}

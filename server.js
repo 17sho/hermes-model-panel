@@ -1086,6 +1086,7 @@ router.post('/auth-settings', async (ctx) => {
     const enabled = !!ctx.request.body?.password_enabled;
     const newPassword = String(ctx.request.body?.new_password || '');
     if (enabled) {
+      if (AUTH_DISABLED && !newPassword) throw new Error('打开密码保护时必须输入至少 8 位的新密码');
       if (newPassword) {
         if (newPassword.length < 8) throw new Error('新密码至少 8 位');
         await updateEnvKey(ENV_FILE, 'ADMIN_PASSWORD', newPassword);
