@@ -12,7 +12,7 @@ const store={
 const PROVIDER_PAGE_SIZE=2;
 const $=id=>document.getElementById(id);
 const STATIC_EVENT_HANDLERS = {
-  1: function(event){event.preventDefault();login()},
+  1: function(event){event.preventDefault();login($('loginBtn'))},
   2: function(event){toggleSideMenu(false)},
   3: function(event){goSection('currentSection',this)},
   4: function(event){goSection('workStatusSection',this)},
@@ -37,7 +37,7 @@ const STATIC_EVENT_HANDLERS = {
   23: function(event){if(event.key==='Enter')searchSessions()},
   24: function(event){searchSessions()},
   25: function(event){sessionPageSizeChanged()},
-  26: function(event){fetchModelsForAdd()},
+  26: function(event){fetchModelsForAdd(this)},
   27: function(event){addProvider()},
   28: function(event){providerSearchChanged()},
   29: function(event){jumpProvider(this.value)},
@@ -46,7 +46,7 @@ const STATIC_EVENT_HANDLERS = {
   32: function(event){gotoProviderPage(this.value)},
   33: function(event){gotoProviderPage(store.providerPage+1)},
   34: function(event){gotoProviderPage(999999)},
-  35: function(event){runTest()},
+  35: function(event){runTest(this)},
   36: function(event){toggleTestLog()},
   37: function(event){clearTestLog()},
   38: function(event){toggleTestLog(false)},
@@ -71,11 +71,11 @@ const STATIC_EVENT_HANDLERS = {
   57: function(event){rebuildCommands()},
   58: function(event){loadState()},
   59: function(event){installGateway()},
-  60: function(event){restartGateway()},
+  60: function(event){restartGateway(this)},
   61: function(event){closeMimoAudio()},
   62: function(event){closeMimoAudio()},
-  63: function(event){runAsr()},
-  64: function(event){runTts()},
+  63: function(event){runAsr(this)},
+  64: function(event){runTts(this)},
   65: function(event){closeCommandsPage()},
   66: function(event){closeCommandsPage()},
   67: function(event){resolveConfirm(false)},
@@ -185,11 +185,11 @@ async function api(path,opts={}){
 }
 function showLogin(){ const app=$('app'); if(app) app.classList.add('hidden'); const login=$('login'); if(login) login.classList.remove('hidden') }
 function showApp(){ $('login').classList.add('hidden'); const app=$('app'); app.classList.remove('hidden','entering'); void app.offsetWidth; app.classList.add('entering') }
-async function login(){
+async function login(sourceButton){
   const pw=$('password');
   const password=pw?String(pw.value||''):'';
   try{
-    const result=await api('/login',{method:'POST',body:JSON.stringify({password})});
+    const result=await api('/login',{method:'POST',body:JSON.stringify({password}),sourceButton});
     store.csrfToken=String(result.csrf_token||'');
     await loadState();
   }catch(e){toast(e.message)}
@@ -214,9 +214,9 @@ async function saveAuthSettings(sourceButton){
     const old_password=String($('authOldPassword')?.value||'');
     const new_password=String($('authNewPassword')?.value||'');
     if(new_password){
-      const changed=await api('/change-password',{method:'POST',body:JSON.stringify({old_password,new_password}),sourceButton:btn});applyAuthSettings(changed);
+      const changed=await api('/change-password',{method:'POST',body:JSON.stringify({old_password,new_password})});applyAuthSettings(changed);
     }
-    const s=await api('/auth-settings',{method:'POST',body:JSON.stringify({password_enabled:enabled}),sourceButton:btn});
+    const s=await api('/auth-settings',{method:'POST',body:JSON.stringify({password_enabled:enabled})});
     applyAuthSettings(s);
     toast(enabled?'已打开密码保护':'已关闭密码保护');
   }catch(e){toast(e.message)}
@@ -719,9 +719,8 @@ async function controlGateway(agent,action){
 async function loadState(){const seq=nextRequestSequence('state');try{const s=await api('/state');if(!isLatestRequest('state',seq))return;store.state=s;showApp();renderCurrent(s.current);renderImageGen();renderProviders(s.providers);renderCommands(s.commands);renderTestTargets(s.providers);renderRestartOptions();initPanelPage();serviceStatus();loadAuthSettings()}catch(e){if(!isLatestRequest('state',seq))return;showLogin();toast(e.message)}}
 async function serviceStatus(){const seq=nextRequestSequence('serviceStatus');const box=$('serviceStatus'); if(!box)return; try{const s=await api('/service-status');if(!isLatestRequest('serviceStatus',seq))return; const list=s.statuses||[]; store.agentStatus={}; list.forEach(x=>{store.agentStatus[x.profile||x.agent]=x.status}); box.innerHTML=list.length?list.map(x=>renderStatusChip(x.profile||x.agent,x.status)).join(''):renderStatusChip('Gateway',s.status||'unknown'); const def=list.find(x=>x.agent==='default'||x.profile==='agent1'); const down=!def||!def.ok; $('installGatewayBtn')?.classList.toggle('hidden',!down); $('restartGatewayBtn')?.classList.toggle('hidden',down); if($('gatewayActionHint')) $('gatewayActionHint').textContent=down?'Gateway 尚未运行。点击安装并启动，已填的模型与聊天平台配置会直接生效。':'重启会中断对应 agent 当前正在运行的任务；只在切换配置未生效或需要刷新聊天平台配置时使用。'; if(store.state) renderCurrent(store.state.current)}catch(e){if(!isLatestRequest('serviceStatus',seq))return;if(e?.code==='NEED_LOGIN'){showLogin();return}box.innerHTML=renderStatusChip('Gateway','unknown')}}
 async function addProvider(){try{const body={name:$('addName').value,base_url:$('addUrl').value,api_key:$('addKey').value,api_mode:$('addMode').value,model:$('addModel').value,models:$('addModels').value};const r=await api('/providers',{method:'POST',body:JSON.stringify(body)});store.state=r.state;renderCurrent(store.state.current);renderProviders(store.state.providers);renderCommands(store.state.commands);renderTestTargets(store.state.providers);toast('已添加中转站')}catch(e){toast(e.message)}}
-async function fetchModelsForAdd(){
-  const btns=[...document.querySelectorAll('button')];
-  const btn=btns.find(b=>b.textContent.trim()==='一键获取模型');
+async function fetchModelsForAdd(sourceButton){
+  const btn=sourceButton||null;
   const oldText=btn?btn.textContent:'';
   if(btn){btn.disabled=true;btn.textContent='获取中...'}
   try{
@@ -762,7 +761,7 @@ async function switchModel(id,m,agent='default'){
   try{const r=await api('/switch',{method:'POST',body:JSON.stringify({providerIndex:id,model:m,agent})});store.state=r.state;renderCurrent(store.state.current);renderProviders(store.state.providers);toast('已切换 '+agentLabel(agent)+'：'+m)}catch(e){toast(e.message)}
 }
 async function rebuildCommands(){try{const r=await api('/rebuild-commands',{method:'POST'});store.state=r.state;renderCommands(store.state.commands);toast('快捷命令已重建')}catch(e){toast(e.message)}}
-async function runTest(){
+async function runTest(sourceButton){
   const target=$('testTarget').value;
   if(target.startsWith('provider-all:')){await testProviderAllModels(Number(target.split(':')[1]), true);return;}
   const body={message:$('testMessage').value};
@@ -774,7 +773,7 @@ async function runTest(){
   $('testResults').innerHTML='<div class="muted">测试中，请稍等...</div>';
   appendTestLog('开始检测：'+label,'run');
   try{
-    const r=await api('/test',{method:'POST',body:JSON.stringify(body)});
+    const r=await api('/test',{method:'POST',body:JSON.stringify(body),sourceButton});
     const results=r.results||[];
     renderTestResults(results);
     results.forEach(one=>appendTestLog(summarizeResult(one),resultLogType(one)));
@@ -878,7 +877,7 @@ async function runAsr(sourceButton){
 async function runTts(sourceButton){
   $('ttsResult').innerHTML='<div class="muted">生成中，请稍等...</div>';
   const body={model:$('ttsModel').value,voice:$('ttsVoice').value,format:$('ttsFormat').value,style:$('ttsStyle').value,text:$('ttsText').value};
-  try{const r=await api('/mimo/tts',{method:'POST',body:JSON.stringify(body)});if(r.ok){const format=['wav','mp3'].includes(r.format)?r.format:'';const subtype=format==='mp3'?'mpeg':'wav';const audioUrl=typeof r.audioDataUrl==='string'&&new RegExp('^data:audio/'+subtype+';base64,[A-Za-z0-9+/]+={0,2}$').test(r.audioDataUrl)?r.audioDataUrl:'';if(!format||!audioUrl)throw new Error('服务器返回的音频格式不安全');const result=document.createElement('div');result.className='result ok';const head=document.createElement('div');head.className='rhead';const title=document.createElement('b');title.textContent='TTS 生成成功';const pill=document.createElement('span');pill.className='pill ok';pill.textContent='HTTP '+r.http_status+' · '+r.latency_ms+'ms';head.append(title,pill);const audio=document.createElement('audio');audio.controls=true;audio.src=audioUrl;const actions=document.createElement('div');actions.className='actions';const link=document.createElement('a');link.download='mimo-tts.'+format;link.href=audioUrl;const button=document.createElement('button');button.textContent='下载音频';link.append(button);actions.append(link);result.append(head,audio,actions);$('ttsResult').replaceChildren(result)}else{$('ttsResult').innerHTML='<div class="result bad"><div class="err">'+esc(r.error||'生成失败')+'</div></div>'}toast('生成完成')}catch(e){$('ttsResult').innerHTML='<div class="err">'+esc(e.message)+'</div>';toast(e.message)}
+  try{const r=await api('/mimo/tts',{method:'POST',body:JSON.stringify(body),sourceButton});if(r.ok){const format=['wav','mp3'].includes(r.format)?r.format:'';const subtype=format==='mp3'?'mpeg':'wav';const audioUrl=typeof r.audioDataUrl==='string'&&new RegExp('^data:audio/'+subtype+';base64,[A-Za-z0-9+/]+={0,2}$').test(r.audioDataUrl)?r.audioDataUrl:'';if(!format||!audioUrl)throw new Error('服务器返回的音频格式不安全');const result=document.createElement('div');result.className='result ok';const head=document.createElement('div');head.className='rhead';const title=document.createElement('b');title.textContent='TTS 生成成功';const pill=document.createElement('span');pill.className='pill ok';pill.textContent='HTTP '+r.http_status+' · '+r.latency_ms+'ms';head.append(title,pill);const audio=document.createElement('audio');audio.controls=true;audio.src=audioUrl;const actions=document.createElement('div');actions.className='actions';const link=document.createElement('a');link.download='mimo-tts.'+format;link.href=audioUrl;const button=document.createElement('button');button.textContent='下载音频';link.append(button);actions.append(link);result.append(head,audio,actions);$('ttsResult').replaceChildren(result)}else{$('ttsResult').innerHTML='<div class="result bad"><div class="err">'+esc(r.error||'生成失败')+'</div></div>'}toast('生成完成')}catch(e){$('ttsResult').innerHTML='<div class="err">'+esc(e.message)+'</div>';toast(e.message)}
 }
 async function createAgent(){
   const btn=$('createAgentBtn');
@@ -992,7 +991,7 @@ async function installGateway(){
   catch(e){toast('安装失败：'+(e?.message||'请稍后重试'))}
   finally{if(btn){btn.dataset.busy='';btn.disabled=false}}
 }
-async function restartGateway(){const agent=$('restartAgent')?.value||'default';if(!await askConfirm('确定重启 '+agentLabel(agent)+' 的 Gateway？会中断对应 agent 当前正在运行的任务。'))return;try{toast('正在重启 '+agentLabel(agent)+' Gateway...');await api('/restart-gateway',{method:'POST',body:JSON.stringify({agent})});toast(agentLabel(agent)+' Gateway 已重启');await serviceStatus()}catch(e){toast('重启失败：'+(e?.message||'请稍后重试'))}}
+async function restartGateway(sourceButton){const agent=$('restartAgent')?.value||'default';if(!await askConfirm('确定重启 '+agentLabel(agent)+' 的 Gateway？会中断对应 agent 当前正在运行的任务。'))return;try{toast('正在重启 '+agentLabel(agent)+' Gateway...');await api('/restart-gateway',{method:'POST',body:JSON.stringify({agent}),sourceButton});toast(agentLabel(agent)+' Gateway 已重启');await serviceStatus()}catch(e){toast('重启失败：'+(e?.message||'请稍后重试'))}}
 
 const DYNAMIC_ACTIONS={
  'fetch-image-models':b=>fetchImageModels(b.dataset.agent),'switch-image-gen':b=>switchImageGen(b.dataset.agent),
@@ -1008,6 +1007,6 @@ const DYNAMIC_ACTIONS={
  'toggle-skill':b=>toggleSkillChip(b.dataset.agent,b.dataset.id),'delete-skill':b=>deleteAgentSkill(b.dataset.agent,b.dataset.id),
  'toggle-skills-cat':b=>toggleSkillsCat(b.dataset.key),'save-skills':b=>saveAgentSkills(b.dataset.agent),'toggle-skills-agent':b=>toggleSkillsAgent(b.dataset.key)
 };
-document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b||b.disabled)return;const fn=DYNAMIC_ACTIONS[b.dataset.action];if(fn){e.preventDefault();Promise.resolve(fn(b))}});
+document.addEventListener('click',event=>{const b=event.target.closest('[data-action]');if(!b||b.disabled)return;const fn=DYNAMIC_ACTIONS[b.dataset.action];if(fn){event.preventDefault();Promise.resolve().then(()=>fn(b)).catch(error=>{console.error(error);toast(error?.message||'操作失败，请稍后重试')})}});
 document.addEventListener('change',e=>{const el=e.target.closest('select[data-action="session-model"]');if(el?.value)setSessionModel(el.dataset.agent,el.dataset.sessionKey,el.value,el)});
 loadState();
