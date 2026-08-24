@@ -6,7 +6,7 @@
 <title>模型台 · Hermes</title>
 <meta name="theme-color" content="#f4f6f8">
 <script>try{const t=localStorage.getItem('hermes-theme'),d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches),v=d?'dark':'light';document.documentElement.dataset.theme=v;document.documentElement.style.colorScheme=v;document.querySelector('meta[name="theme-color"]').content=d?'#11161c':'#f4f6f8'}catch{}</script>
-<link rel="stylesheet" href="css/app.css?v=select-ui-1">
+<link rel="stylesheet" href="css/app.css?v=fixed-header-1">
 </head>
 <body>
 <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -46,7 +46,7 @@
     <footer class="sideFoot"><button id="themeToggle" class="themeNav" type="button" data-static-click="70" aria-label="切换夜间模式" title="切换夜间模式"><span class="themeIcon" aria-hidden="true">◐</span><span class="themeLabel">夜间模式</span></button><button id="logoutBtn" class="logoutNav" type="button" data-static-click="16"><svg class="logoutIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/></svg><span>退出登录</span></button></footer>
   </aside>
   <div class="workspace">
-    <header class="top"><button id="mobileMenuBtn" class="mobileMenuBtn" type="button" aria-controls="sideMenu" aria-expanded="false" data-static-click="17">菜单</button><div class="title"><h1>模型台</h1></div><div class="topRight"><div class="badge" id="serviceStatus" aria-label="Agent 状态"></div></div></header>
+    <header class="top"><button id="mobileMenuBtn" class="mobileMenuBtn" type="button" aria-controls="sideMenu" aria-expanded="false" data-static-click="17"><span class="menuIcon" aria-hidden="true"><i></i><i></i><i></i></span><span class="menuLabel">菜单</span></button><div class="title"><h1>模型台</h1></div><div class="topRight"><div class="badge" id="serviceStatus" aria-label="Agent 状态"></div></div></header>
     <div class="content">
       <section id="currentSection" class="panelSection activeSection"><header class="sectionHead"><div><span class="sectionKicker">OVERVIEW</span><h2>当前模型</h2><p class="pageHint">按 Agent 查看当前中转和模型；配置切换后请重置会话或重启 Gateway。</p></div><button data-static-click="18">刷新状态</button></header><div id="current" class="current"></div><div class="hr"></div><h3>新建 Agent</h3><p class="muted">可空白创建或克隆模型配置；聊天 Token 与 API 密钥不会被克隆。</p><div class="row"><input id="newAgentName" placeholder="名字，例如 agent4" autocomplete="off"><select id="cloneFromAgent"><option value="">空白新建</option></select><select id="newAgentScope"><option value="system">系统级 systemd</option><option value="user">用户级 systemd</option></select></div><div class="actions"><button id="createAgentBtn" class="primary" data-static-click="19">新建 Agent</button></div></section>
       <section id="workStatusSection" class="panelSection"><header class="sectionHead"><div><span class="sectionKicker">RUNTIME</span><h2>工作状态</h2><p class="pageHint">查看 Gateway、任务和聊天平台连接情况。</p></div><button data-static-click="20">刷新</button></header><div id="workStatusBox" class="workList"></div></section>
