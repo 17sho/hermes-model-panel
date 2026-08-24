@@ -35,7 +35,7 @@ pre,code,.agentModel,.agentLine .value,.pmeta,.num,.testLogBody{font-family:ui-m
 .workspace{min-width:0;min-height:0;overflow-y:auto}
 .top{position:sticky;top:0;z-index:6;min-height:4rem;display:flex;align-items:center;gap:var(--sp-4);padding-block:var(--sp-3);padding-inline:max(var(--sp-6),calc((100% - var(--content-max))/2 + var(--sp-6)));border-bottom:1px solid var(--line);background:var(--bg)}
 .title{min-width:max-content;margin-right:auto}.title h1{margin:0;white-space:nowrap}.topRight,.badge{min-width:0}.topRight,.badge,.actions,.imgActions,.workPlats{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
-.content{width:min(var(--content-max),100%);margin:0 auto;padding:var(--sp-6)}
+.content{box-sizing:border-box;width:min(var(--content-max),100%);margin:0 auto;padding:var(--sp-6)}
 .panelSection{display:none}.panelSection.activeSection{display:block}.sectionHead,.sessPageHead,.settingsHero,.modalHead,.phead,.workHead,.workSessTop,.readableEventHead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
 .sectionHead{padding-bottom:var(--sp-4);margin-bottom:var(--sp-5);border-bottom:1px solid var(--line)}.sectionKicker{display:block;margin-bottom:var(--sp-1);color:var(--accent);font-size:.625rem;letter-spacing:.16em}
 .provider,.agentCard,.workCard,.sessAgent,.result,.settingsGroup,.usageMini,.usageModels,.commandEntry,.audioBox{border:1px solid var(--line);background:var(--surface)}

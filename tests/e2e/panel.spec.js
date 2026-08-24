@@ -72,6 +72,26 @@ for (const width of [320, 390, 900, 1024, 1100]) {
   });
 }
 
+for (const width of [320, 390]) {
+  test(`${width}px 主内容在视口内水平居中`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const geometry = await page.evaluate(() => {
+      const content = document.querySelector('.content')?.getBoundingClientRect();
+      const panel = document.querySelector('.panelSection.activeSection')?.getBoundingClientRect();
+      return {
+        contentLeft: content?.left,
+        contentRight: window.innerWidth - content?.right,
+        panelLeft: panel?.left,
+        panelRight: window.innerWidth - panel?.right,
+      };
+    });
+    expect(Math.abs(geometry.contentLeft - geometry.contentRight)).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.panelLeft - geometry.panelRight)).toBeLessThanOrEqual(1);
+    expect(geometry.panelLeft).toBeGreaterThanOrEqual(12);
+    expect(geometry.panelRight).toBeGreaterThanOrEqual(12);
+  });
+}
+
 test('面板安全保存按钮会提交密码与开关设置', async ({ page }) => {
   const requests = [];
   await page.route('**/api/{change-password,auth-settings}', async (route) => {
