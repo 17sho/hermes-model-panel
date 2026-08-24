@@ -7,6 +7,7 @@ import fssync from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import YAML from 'yaml';
+import packageInfo from './package.json' with { type: 'json' };
 import { atomicWriteFile, serializeFile } from './src/lib/atomic-files.js';
 import { publicError, safeEqual } from './src/lib/errors.js';
 import { execFileAsync } from './src/lib/process-runner.js';
@@ -1163,7 +1164,7 @@ router.post('/logout-all', async (ctx) => {
   ctx.body = authPublicStatus();
 });
 
-router.get('/health', async (ctx) => { ctx.body = { ok: true }; });
+router.get('/health', async (ctx) => { ctx.body = { ok: true, version: packageInfo.version }; });
 
 router.get('/usage', async (ctx) => {
   try {
@@ -2444,6 +2445,7 @@ router.get('/panel-update', async (ctx) => {
       ok: true,
       repo: PANEL_UPDATE_REPO,
       branch: PANEL_UPDATE_BRANCH,
+      version: packageInfo.version,
       installed_sha,
       latest_sha,
       update_available: !installed_sha || installed_sha !== latest_sha,
