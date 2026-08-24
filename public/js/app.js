@@ -12,7 +12,7 @@ const store={
 const PROVIDER_PAGE_SIZE=2;
 const $=id=>document.getElementById(id);
 const STATIC_EVENT_HANDLERS = {
-  1: function(event){event.preventDefault();login($('loginBtn'))},
+  1: function(event){event.preventDefault();login(this.querySelector?.('#loginBtn')||$('loginBtn'))},
   2: function(event){toggleSideMenu(false)},
   3: function(event){goSection('currentSection',this)},
   4: function(event){goSection('workStatusSection',this)},
@@ -149,8 +149,9 @@ const REQUEST_SEQUENCE=Object.create(null);
 const INFLIGHT_CONTROLLERS=new Set();
 function nextRequestSequence(name){return REQUEST_SEQUENCE[name]=(REQUEST_SEQUENCE[name]||0)+1}
 function isLatestRequest(name,seq){return REQUEST_SEQUENCE[name]===seq}
-function busyStart(btn,label='处理中…'){if(!btn||btn.closest('.sideNav')||btn.id==='mobileMenuBtn'||btn.id==='logoutBtn'||btn.dataset.apiBusy==='1')return false;btn.dataset.apiBusy='1';btn.dataset.busy='1';btn.dataset.idleText=btn.textContent;btn.disabled=true;btn.classList.add('loadingBtn');btn.textContent=label;return true}
-function busyEnd(btn){if(!btn)return;btn.disabled=btn.dataset.batchLocked==='1';btn.classList.remove('loadingBtn');btn.textContent=btn.dataset.idleText||btn.textContent;delete btn.dataset.apiBusy;delete btn.dataset.busy;delete btn.dataset.idleText}
+function isButtonElement(btn){return !!btn&&typeof btn.closest==='function'&&btn.dataset&&btn.classList}
+function busyStart(btn,label='处理中…'){if(!isButtonElement(btn)||btn.closest('.sideNav')||btn.id==='mobileMenuBtn'||btn.id==='logoutBtn'||btn.dataset.apiBusy==='1')return false;btn.dataset.apiBusy='1';btn.dataset.busy='1';btn.dataset.idleText=btn.textContent;btn.disabled=true;btn.classList.add('loadingBtn');btn.textContent=label;return true}
+function busyEnd(btn){if(!isButtonElement(btn))return;btn.disabled=btn.dataset.batchLocked==='1';btn.classList.remove('loadingBtn');btn.textContent=btn.dataset.idleText||btn.textContent;delete btn.dataset.apiBusy;delete btn.dataset.busy;delete btn.dataset.idleText}
 function clearSensitiveClientState(){store.state=null;store.sessionStatusCache=[];store.sessionMeta={agents:[],agent:'',page:1,pageSize:20,total:0,pages:1,search:'',choices:[]};for(const id of ['providers','current','imageGenBox','chatToolsBox','workStatusBox','sessionResumeBox','agentToolsBox','agentSkillsBox','testResults','asrResult','ttsResult','serviceStatus']){const el=$(id);if(el)el.replaceChildren()}store.csrfToken=''}
 function invalidateClientSession(){for(const controller of INFLIGHT_CONTROLLERS)controller.abort();INFLIGHT_CONTROLLERS.clear();for(const key of Object.keys(REQUEST_SEQUENCE))REQUEST_SEQUENCE[key]++;clearSensitiveClientState();showLogin()}
 async function api(path,opts={}){
