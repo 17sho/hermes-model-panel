@@ -378,7 +378,7 @@ function renderProviders(ps){const all=ps||[];const list=filteredProviders(all);
 function escAttr(s){return esc(s).replace(/[\r\n]/g,'')}
 function renderStatusChip(name,status,{connected,label}={}){const raw=String(status||'').trim().toLowerCase();const on=connected??/^(active|ok|running|up|connected)$/.test(raw);const text=label??({active:'运行中',ok:'正常',running:'运行中',up:'运行中',inactive:'未运行',failed:'异常',unknown:'状态未知',connected:'已连接'})[raw]??status??'状态未知';return `<span class="statusChip"><span class="dot ${on?'on':'off'}"></span><span class="name">${esc(name)}</span><span class="st">${esc(text)}</span></span>`}
 function renderTopStatus(list,fallback='unknown'){const rows=Array.isArray(list)?list:[];if(!rows.length)return renderStatusChip('Gateway',fallback);const healthy=rows.filter(x=>/^(active|ok|running|up|connected)$/i.test(String(x.status||''))||x.ok===true).length;const abnormal=rows.length-healthy;const label=abnormal?`${healthy} 正常 · ${abnormal} 异常`:`${healthy} 个 Agent 运行中`;const detail=rows.map(x=>`${x.profile||x.agent||'Agent'}：${x.status||'unknown'}`).join('\n');return `<span class="statusSummary" title="${escAttr(detail)}"><span class="dot ${abnormal?'off':'on'}"></span><span>${esc(label)}</span></span>`}
-function renderFoldCard({open,action,key,title,hint,count,body=''}){return `<div class="sessAgent ${open?'open':''}"><button type="button" class="sessFoldHead" data-action="${escAttr(action)}" data-key="${escAttr(key)}"><span class="sessChevron">${open?'▾':'▸'}</span><span class="sessFoldMain"><span class="workName">${esc(title)}</span><span class="sessFoldHint">${esc(hint)}</span></span><span class="sessCount">${esc(count)}</span></button>${body}</div>`}
+function renderFoldCard({open,action,key,title,hint,count,body='',countLabel=''}){const badge=countLabel||`${count} 项`;return `<div class="sessAgent ${open?'open':''}"><button type="button" class="sessFoldHead" data-action="${escAttr(action)}" data-key="${escAttr(key)}" aria-expanded="${open?'true':'false'}"><span class="sessChevron" aria-hidden="true">›</span><span class="sessFoldMain"><span class="workName">${esc(title)}</span><span class="sessFoldHint">${esc(hint)}</span></span><span class="sessCount">${esc(badge)}</span></button>${body}</div>`}
 function openCommandsPage(){openModal('commandsModal')}
 function closeCommandsPage(){closeModal('commandsModal')}
 function renderCommands(cs){const box=$('commands'); if(!box)return; box.innerHTML=cs.map(c=>`<div class="cmd"><div><code>/${esc(c.name)}</code><div class="muted">${esc(c.description)}</div></div><div class="muted">${esc(c.target)}</div></div>`).join('')||'<p class="muted">暂无快捷命令</p>'}
@@ -580,8 +580,8 @@ function renderAgentTools(data){
       const onNow=on.has(t.id);
       return `<button type="button" class="toolBtn ${onNow?'on':'off'}" data-action="toggle-tool" data-agent="${escAttr(a.agent)}" data-id="${escAttr(t.id)}">${esc(toolLabel(t.id))}${onNow?' · 开':' · 关'}</button>`;
     }).join('');
-    const body=!open?'':`<div class="platToolGrid">${chips}</div><div class="actions"><button type="button" class="primary" data-action="save-tools" data-agent="${escAttr(a.agent)}">保存这个 agent</button></div>`;
-    return renderFoldCard({open,action:'toggle-tools-agent',key,title:a.name,hint,count:n,body});
+    const body=!open?'':`<div class="agentConfigBody"><div class="platToolGrid">${chips}</div><div class="agentConfigActions"><span>修改后需要保存，并重启对应 Gateway 生效。</span><button type="button" class="primary" data-action="save-tools" data-agent="${escAttr(a.agent)}">保存工具设置</button></div></div>`;
+    return renderFoldCard({open,action:'toggle-tools-agent',key,title:a.name,hint,count:n,countLabel:`${n} 个工具`,body});
   }).join('');
 }
 function toggleToolsAgent(key){if(TOOLS_AGENT_OPEN.has(key)) TOOLS_AGENT_OPEN.delete(key); else TOOLS_AGENT_OPEN.add(key); if(TOOLS_CACHE) renderAgentTools(TOOLS_CACHE)}
@@ -652,11 +652,11 @@ function renderAgentSkills(data){
           const onNow=!off.has(t.id);
           return `<span class="skillChipWrap"><button type="button" class="toolBtn ${onNow?'on':'off'}" data-action="toggle-skill" data-agent="${escAttr(key)}" data-id="${escAttr(t.id)}">${esc(t.id)}${onNow?' · 开':' · 关'}</button><button type="button" class="danger skillDel" data-action="delete-skill" data-agent="${escAttr(key)}" data-id="${escAttr(t.id)}">删</button></span>`;
         }).join('');
-        return renderFoldCard({open:cOpen,action:'toggle-skills-cat',key:ck,title:catLabel(cat),hint:offN?('关 '+offN+' / '+items.length):items.length+' 个',count:items.length,body:cOpen?`<div class="platToolGrid">${chips}</div>`:''});
+        return renderFoldCard({open:cOpen,action:'toggle-skills-cat',key:ck,title:catLabel(cat),hint:offN?('关 '+offN+' / '+items.length):items.length+' 个',count:items.length,countLabel:`${items.length} 个`,body:cOpen?`<div class="skillCategoryBody"><div class="platToolGrid">${chips}</div></div>`:''});
       }).join('');
-      body=`<div>${body}</div><div class="actions"><button type="button" class="primary" data-action="save-skills" data-agent="${escAttr(a.agent)}">保存这个 agent</button></div>`;
+      body=`<div class="agentConfigBody"><div class="skillCategoryList">${body}</div><div class="agentConfigActions"><span>开关和删除操作完成后，请保存这个 Agent。</span><button type="button" class="primary" data-action="save-skills" data-agent="${escAttr(a.agent)}">保存 Skills 设置</button></div></div>`;
     }
-    return renderFoldCard({open,action:'toggle-skills-agent',key,title:a.name,hint,count:catalog.length-nOff,body});
+    return renderFoldCard({open,action:'toggle-skills-agent',key,title:a.name,hint,count:catalog.length-nOff,countLabel:`${catalog.length-nOff} 个启用`,body});
   }).join('');
 }
 function toggleSkillsAgent(key){if(SKILLS_AGENT_OPEN.has(key)) SKILLS_AGENT_OPEN.delete(key); else SKILLS_AGENT_OPEN.add(key); if(SKILLS_CACHE) renderAgentSkills(SKILLS_CACHE)}
