@@ -4,15 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>模型台 · Hermes</title>
-<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/app.css?v=login-redesign-1">
 </head>
 <body>
 <section id="login" class="login hidden" aria-labelledby="loginTitle">
   <form class="loginCard" data-static-submit="1">
-    <div class="loginMark" aria-hidden="true">H</div>
-    <h1 id="loginTitle">Hermes 模型台</h1>
-    <p class="muted">输入管理员密码进入控制台。</p>
-    <div class="form"><input id="password" type="password" placeholder="管理员密码" autocomplete="current-password"><button id="loginBtn" class="primary" type="submit">登录</button></div>
+    <header class="loginHead">
+      <div class="loginMark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16M7 12h10"/></svg></div>
+      <div class="loginBrand"><span>HERMES CONTROL</span><h1 id="loginTitle">欢迎回来</h1></div>
+    </header>
+    <p class="loginIntro">登录模型台，管理 Agent、模型与运行服务。</p>
+    <div class="loginForm"><label for="password">管理员密码</label><div class="loginPassword"><span aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><input id="password" type="password" placeholder="输入管理员密码" autocomplete="current-password"></div><button id="loginBtn" class="primary" type="submit">进入控制台</button></div>
+    <footer class="loginFoot"><span class="loginStatusDot"></span><span>安全会话 · 登录后自动进入管理面板</span></footer>
   </form>
 </section>
 <main id="app" class="appShell hidden">
