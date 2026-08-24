@@ -82,6 +82,8 @@ const STATIC_EVENT_HANDLERS = {
   68: function(event){resolveConfirm(false)},
   69: function(event){resolveConfirm(true)},
   70: function(event){toggleTheme()},
+  71: function(event){checkPanelUpdate(this)},
+  72: function(event){runPanelUpdate(this)},
 };
 function installStaticEventHandlers(){
   for(const type of ['click','change','input','keydown','submit']){
@@ -98,6 +100,11 @@ const THEME_MEDIA=window.matchMedia('(prefers-color-scheme:dark)');
 function preferredTheme(){const saved=window.localStorage.getItem(THEME_KEY);return saved==='dark'||saved==='light'?saved:(THEME_MEDIA.matches?'dark':'light')}
 function applyTheme(theme){const value=theme==='dark'?'dark':'light';document.documentElement.dataset.theme=value;document.documentElement.style.colorScheme=value;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',value==='dark'?'#11161c':'#f4f6f8');const btn=$('themeToggle');if(btn){const label=value==='dark'?'日间模式':'夜间模式';const icon=btn.querySelector('.themeIcon');const text=btn.querySelector('.themeLabel');if(icon)icon.textContent=value==='dark'?'☀':'◐';if(text)text.textContent=label;btn.setAttribute('aria-label','切换'+label);btn.title='切换'+label}}
 function toggleTheme(){const next=document.documentElement.dataset.theme==='dark'?'light':'dark';window.localStorage.setItem(THEME_KEY,next);applyTheme(next)}
+let PANEL_UPDATE_INFO=null;
+function shortSha(sha){return String(sha||'').slice(0,8)||'-'}
+async function checkPanelUpdate(btn){try{const r=await api('/panel-update');PANEL_UPDATE_INFO=r;const hint=$('panelUpdateHint'),run=$('runPanelUpdateBtn');if(r.update_available){hint.textContent=`发现新版本 ${shortSha(r.latest_sha)}；当前 ${shortSha(r.installed_sha)}。更新会自动备份并重启面板。`;run.classList.remove('hidden')}else{hint.textContent=`已是最新版本 ${shortSha(r.installed_sha||r.latest_sha)}。`;run.classList.add('hidden')}if(r.status?.state==='failed')hint.textContent+=` 上次更新失败：${r.status.message||'未知错误'}`}catch(e){toast(e.message)}}
+async function runPanelUpdate(btn){if(!PANEL_UPDATE_INFO?.latest_sha){toast('请先检查更新');return}if(!await askConfirm(`确定更新面板到 ${shortSha(PANEL_UPDATE_INFO.latest_sha)}？\\n更新期间页面会短暂断开，失败会自动回滚。`))return;try{await api('/panel-update',{method:'POST',body:JSON.stringify({expected_sha:PANEL_UPDATE_INFO.latest_sha})});$('panelUpdateHint').textContent='更新已启动，正在下载、检查并重启面板…';$('runPanelUpdateBtn').classList.add('hidden');setTimeout(waitForPanelUpdate,3000)}catch(e){toast(e.message)}}
+async function waitForPanelUpdate(){for(let i=0;i<60;i++){try{const r=await api('/panel-update');if(r.status?.state==='success'){location.reload();return}if(r.status?.state==='failed'){PANEL_UPDATE_INFO=r;$('panelUpdateHint').textContent='更新失败：'+(r.status.message||'未知错误');toast('更新失败');return}$('panelUpdateHint').textContent=r.status?.message||'更新处理中…'}catch{}await new Promise(resolve=>setTimeout(resolve,2000))}$('panelUpdateHint').textContent='更新仍在后台执行，请稍后刷新页面查看。'}
 applyTheme(preferredTheme());
 const syncSystemTheme=()=>{if(!window.localStorage.getItem(THEME_KEY))applyTheme(THEME_MEDIA.matches?'dark':'light')};
 if(THEME_MEDIA.addEventListener)THEME_MEDIA.addEventListener('change',syncSystemTheme);else THEME_MEDIA.addListener(syncSystemTheme);

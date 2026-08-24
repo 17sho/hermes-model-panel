@@ -16,6 +16,11 @@ const PORT = Number(process.env.PORT || 3010);
 const HERMES_CONFIG = process.env.HERMES_CONFIG || '/root/.hermes/config.yaml';
 const HERMES_HOME = process.env.HERMES_HOME || path.dirname(HERMES_CONFIG);
 const PROFILES_DIR = process.env.HERMES_PROFILES_DIR || path.join(HERMES_HOME, 'profiles');
+const PANEL_UPDATE_REPO = process.env.PANEL_UPDATE_REPO || '17sho/hermes-model-panel';
+const PANEL_UPDATE_BRANCH = process.env.PANEL_UPDATE_BRANCH || 'main';
+const PANEL_UPDATE_SCRIPT = process.env.PANEL_UPDATE_SCRIPT || path.join(process.cwd(), 'scripts', 'update-panel.sh');
+const PANEL_UPDATE_STATE = process.env.PANEL_UPDATE_STATE || '/var/lib/hermes-model-panel/update-status.json';
+const PANEL_VERSION_FILE = process.env.PANEL_VERSION_FILE || path.join(process.cwd(), '.panel-version');
 
 function titleCase(s) {
   return String(s || '').replace(/(^|[-_])([a-z])/g, (_, a, b) => (a ? ' ' : '') + b.toUpperCase());
@@ -58,6 +63,43 @@ function discoverAgents() {
 
 function AGENTS() {
   return discoverAgents();
+}
+
+function validGithubRepo(value) {
+  return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(String(value || ''));
+}
+
+function validGitRef(value) {
+  return /^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/.test(String(value || '')) && !String(value).includes('..');
+}
+
+async function readInstalledPanelSha() {
+  try {
+    const value = (await fs.readFile(PANEL_VERSION_FILE, 'utf8')).trim();
+    if (/^[0-9a-f]{40}$/.test(value)) return value;
+  } catch { /* pre-updater installs have no marker */ }
+  try {
+    const { stdout = '' } = await execFileAsync('git', ['-C', process.cwd(), 'rev-parse', 'HEAD'], { timeout: 3000 });
+    const value = stdout.trim();
+    return /^[0-9a-f]{40}$/.test(value) ? value : '';
+  } catch { return ''; }
+}
+
+async function fetchGithubPanelSha() {
+  if (!validGithubRepo(PANEL_UPDATE_REPO) || !validGitRef(PANEL_UPDATE_BRANCH)) throw new Error('在线更新源配置无效');
+  const response = await fetch(`https://api.github.com/repos/${PANEL_UPDATE_REPO}/commits/${encodeURIComponent(PANEL_UPDATE_BRANCH)}`, {
+    headers: { accept: 'application/vnd.github+json', 'user-agent': 'hermes-model-panel-updater' },
+    signal: globalThis.AbortSignal.timeout(15000),
+  });
+  if (!response.ok) throw new Error(`GitHub 版本检查失败（HTTP ${response.status}）`);
+  const data = await response.json();
+  const sha = String(data.sha || '');
+  if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error('GitHub 返回了无效版本号');
+  return sha;
+}
+
+async function readPanelUpdateStatus() {
+  try { return JSON.parse(await fs.readFile(PANEL_UPDATE_STATE, 'utf8')); } catch { return { state: 'idle', message: '尚未执行在线更新' }; }
 }
 const PANEL_META_PATH = process.env.PANEL_META_PATH || '/root/.hermes/model-panel-meta.json';
 const DEFAULT_OPENAI_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
@@ -2390,6 +2432,48 @@ router.post('/gateway-control', async (ctx) => {
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message || '操作失败' };
+  }
+});
+
+router.get('/panel-update', async (ctx) => {
+  try {
+    const [installed_sha, latest_sha, status] = await Promise.all([
+      readInstalledPanelSha(), fetchGithubPanelSha(), readPanelUpdateStatus(),
+    ]);
+    ctx.body = {
+      ok: true,
+      repo: PANEL_UPDATE_REPO,
+      branch: PANEL_UPDATE_BRANCH,
+      installed_sha,
+      latest_sha,
+      update_available: !installed_sha || installed_sha !== latest_sha,
+      status,
+    };
+  } catch (e) {
+    ctx.status = 502;
+    ctx.body = { ok: false, error: publicError(e, '版本检查失败') };
+  }
+});
+
+router.post('/panel-update', async (ctx) => {
+  try {
+    const expected = String(ctx.request.body?.expected_sha || '').trim();
+    if (!/^[0-9a-f]{40}$/.test(expected)) throw new Error('请先检查最新版本');
+    const latest = await fetchGithubPanelSha();
+    if (latest !== expected) throw new Error('GitHub 版本已变化，请重新检查');
+    await fs.access(PANEL_UPDATE_SCRIPT, fssync.constants.X_OK);
+    const unit = `hermes-model-panel-update-${Date.now()}`;
+    await execFileAsync('systemd-run', [
+      '--unit', unit, '--collect', '--property=Type=exec',
+      '--setenv', `PANEL_UPDATE_REPO=${PANEL_UPDATE_REPO}`,
+      '--setenv', `PANEL_UPDATE_BRANCH=${PANEL_UPDATE_BRANCH}`,
+      PANEL_UPDATE_SCRIPT, expected,
+    ], { timeout: 10000 });
+    ctx.status = 202;
+    ctx.body = { ok: true, state: 'started', expected_sha: expected };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: publicError(e, '启动在线更新失败') };
   }
 });
 

@@ -19,6 +19,12 @@ npm start
 
 For production, use `systemd/hermes-model-panel.service` as a reference, install the project at `/opt/hermes-model-panel`, and place the environment file at `/etc/hermes-model-panel.env`. An administrator should perform daemon-reload and restart during a maintenance window after unit changes; repository tests never restart services.
 
+## Online updates
+
+The Settings page can check the GitHub `main` branch and install updates. The updater pins the reviewed commit SHA, downloads a source archive, installs production dependencies and runs syntax checks in a temporary directory, atomically replaces `/opt/hermes-model-panel`, and restarts the service. A failed startup restores the previous release. Environment files, Hermes configuration, Session databases, and panel metadata live outside the code directory and are not overwritten.
+
+For the first updater-enabled deployment, install the release containing `scripts/update-panel.sh` and run `chmod 0755 /opt/hermes-model-panel/scripts/update-panel.sh`. After that, test locally, commit, and push to GitHub `main`; the server can update from **Settings → Panel online update**. Override the source with `PANEL_UPDATE_REPO` and `PANEL_UPDATE_BRANCH`.
+
 ## Backup and restore
 
 Before changing Hermes YAML, the panel creates timestamped `.bak-*` files beside the configuration and retains the latest 10. Keep separate deployment backups of the Hermes configuration tree, Session SQLite databases, and panel metadata. Before restoring, stop writers, preserve the current files, and restore a backup made by a compatible version. Do not overwrite a live SQLite database.
