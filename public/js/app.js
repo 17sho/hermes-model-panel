@@ -81,6 +81,7 @@ const STATIC_EVENT_HANDLERS = {
   67: function(event){resolveConfirm(false)},
   68: function(event){resolveConfirm(false)},
   69: function(event){resolveConfirm(true)},
+  70: function(event){toggleTheme()},
 };
 function installStaticEventHandlers(){
   for(const type of ['click','change','input','keydown','submit']){
@@ -92,6 +93,14 @@ function installStaticEventHandlers(){
   }
 }
 installStaticEventHandlers();
+const THEME_KEY='hermes-theme';
+const THEME_MEDIA=window.matchMedia('(prefers-color-scheme:dark)');
+function preferredTheme(){const saved=window.localStorage.getItem(THEME_KEY);return saved==='dark'||saved==='light'?saved:(THEME_MEDIA.matches?'dark':'light')}
+function applyTheme(theme){const value=theme==='dark'?'dark':'light';document.documentElement.dataset.theme=value;document.documentElement.style.colorScheme=value;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',value==='dark'?'#11161c':'#f4f6f8');const btn=$('themeToggle');if(btn){btn.textContent=value==='dark'?'☀':'◐';btn.setAttribute('aria-label',value==='dark'?'切换日间模式':'切换夜间模式');btn.title=btn.getAttribute('aria-label')}}
+function toggleTheme(){const next=document.documentElement.dataset.theme==='dark'?'light':'dark';window.localStorage.setItem(THEME_KEY,next);applyTheme(next)}
+applyTheme(preferredTheme());
+const syncSystemTheme=()=>{if(!window.localStorage.getItem(THEME_KEY))applyTheme(THEME_MEDIA.matches?'dark':'light')};
+if(THEME_MEDIA.addEventListener)THEME_MEDIA.addEventListener('change',syncSystemTheme);else THEME_MEDIA.addListener(syncSystemTheme);
 const API_BASE=(document.querySelector('base')?.getAttribute('href')||window.location.pathname).replace(/\/$/,'')+'/api';
 let CONFIRM_RESOLVE=null,CONFIRM_FOCUS=null;
 function askConfirm(message){if(CONFIRM_RESOLVE)return Promise.resolve(false);return new Promise(resolve=>{CONFIRM_RESOLVE=resolve;CONFIRM_FOCUS=document.activeElement;$('confirmMessage').textContent=message;openModal('confirmModal','confirmOkBtn');})}
@@ -118,7 +127,7 @@ function setMenuPageLock(lock){
     const y=MENU_SCROLL_Y;document.body.style.position='';document.body.style.top='';document.body.style.left='';document.body.style.right='';document.body.style.width='';MENU_SCROLL_Y=0;MENU_IS_OPEN=false;window.scrollTo(0,y);
   }
 }
-function toggleSideMenu(open){const m=$('sideMenu');const shade=$('menuShade');const btn=$('mobileMenuBtn');const nav=m?.querySelector('.sideNav');if(!m)return;if(!MOBILE_MENU_MQ.matches){m.classList.remove('open');shade?.classList.remove('show');btn?.setAttribute('aria-expanded','false');setMenuPageLock(false);return}const show=open===undefined?!MENU_IS_OPEN:!!open;if(show&&nav)nav.scrollTop=0;setMenuPageLock(show);m.classList.toggle('open',show);shade?.classList.toggle('show',show);btn?.setAttribute('aria-expanded',String(show));shade?.setAttribute('aria-hidden',String(!show))}
+function toggleSideMenu(open){const m=$('sideMenu');const shade=$('menuShade');const btn=$('mobileMenuBtn');const nav=m?.querySelector('.sideNav');if(!m)return;if(!MOBILE_MENU_MQ.matches){m.classList.remove('open');shade?.classList.remove('show');btn?.setAttribute('aria-expanded','false');setMenuPageLock(false);return}const show=open===undefined?!MENU_IS_OPEN:!!open;if(show&&nav)nav.scrollTop=0;if(show)setMenuPageLock(true);m.classList.toggle('open',show);shade?.classList.toggle('show',show);btn?.setAttribute('aria-expanded',String(show));shade?.setAttribute('aria-hidden',String(!show));if(!show){const release=()=>setMenuPageLock(false);if(window.matchMedia('(prefers-reduced-motion:reduce)').matches)release();else m.addEventListener('transitionend',release,{once:true})}}
 const MOBILE_MENU_MQ=window.matchMedia('(max-width:900px)');
 function syncMenuToViewport(){
   if(!MOBILE_MENU_MQ.matches){
@@ -136,7 +145,7 @@ function goSection(id,btn){const el=$(id);if(!el)return;showPanel(id);if(id==='c
 function initPanelPage(){const wanted=(location.hash||'').replace('#','');const first=document.querySelector('.panelSection')?.id||'currentSection';const id=$(wanted)?wanted:first;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='sessionResumeSection')loadSessionResume();if(id==='agentToolsSection')loadAgentTools();if(id==='agentSkillsSection')loadAgentSkills();if(id==='readableLogsSection')loadReadableLogs();if(id==='settingsSection')loadAuthSettings()}
 requestAnimationFrame(()=>document.body.classList.add('ready'));
 let TOAST_TIMER=null;
-function toast(msg){if(!msg||msg==='NEED_LOGIN'||/unauthorized/i.test(String(msg)))return;const t=$('toast');t.textContent=msg;t.style.display='block';if(TOAST_TIMER)clearTimeout(TOAST_TIMER);TOAST_TIMER=setTimeout(()=>{t.style.display='none';TOAST_TIMER=null},3200)}
+function toast(msg){if(!msg||msg==='NEED_LOGIN'||/unauthorized/i.test(String(msg)))return;const t=$('toast');t.textContent=msg;t.classList.remove('leaving');t.classList.add('show');if(TOAST_TIMER)clearTimeout(TOAST_TIMER);TOAST_TIMER=setTimeout(()=>{t.classList.add('leaving');const done=()=>{t.classList.remove('show','leaving');TOAST_TIMER=null};if(window.matchMedia('(prefers-reduced-motion:reduce)').matches)done();else t.addEventListener('animationend',done,{once:true})},3200)}
 function nowTime(){return new Date().toLocaleTimeString('zh-CN',{hour12:false})}
 function clearTestLog(){const box=$('testLogBody'); if(box) box.innerHTML='<div class="muted">日志已清空，等待开始检测...</div>'}
 function setTestLogVisible(visible){const log=$('testLog'); const btn=$('testLogToggleBtn'); if(!log)return; log.classList.toggle('hidden', !visible); if(btn) btn.textContent=visible?'隐藏检测日志':'查看检测日志'}

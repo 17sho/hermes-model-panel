@@ -24,6 +24,25 @@ test('13 页导航保留 SVG，移动菜单可重复开关', async ({ page }) =>
   }
 });
 
+test('主题支持切换与持久化', async ({ page }) => {
+  const root = page.locator('html');
+  await page.locator('#themeToggle').click();
+  const selected = await root.getAttribute('data-theme');
+  expect(['light', 'dark']).toContain(selected);
+  expect(await page.evaluate(() => window.localStorage.getItem('hermes-theme'))).toBe(selected);
+  await page.reload();
+  await expect(root).toHaveAttribute('data-theme', selected);
+});
+
+test('移动菜单退出动画完成后才释放页面锁', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.locator('#mobileMenuBtn').click();
+  await expect(page.locator('body')).toHaveClass(/menuOpen/);
+  await page.mouse.click(380, 400);
+  await expect(page.locator('#sideMenu')).not.toHaveClass(/open/);
+  await expect.poll(() => page.locator('body').evaluate((el) => el.classList.contains('menuOpen'))).toBe(false);
+});
+
 test('弹窗保持焦点陷阱并恢复触发按钮焦点', async ({ page }) => {
   const trigger = page.locator('[data-target="commandsSection"]');
   await trigger.click();
