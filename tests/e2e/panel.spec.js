@@ -15,6 +15,8 @@ test('13 页导航保留 SVG，移动菜单可重复开关', async ({ page }) =>
     await expect(page.locator(`#${target}`)).toHaveClass(/activeSection/);
   }
   await expect(page.locator('.sideNav svg')).toHaveCount(svgCount);
+  await expect(page.locator('#serviceStatus .statusSummary, #serviceStatus .statusChip')).toHaveCount(1);
+  await expect(page.locator('#serviceStatus')).toContainText(/Agent|Gateway/);
   await page.setViewportSize({ width: 390, height: 760 });
   for (let round = 0; round < 2; round += 1) {
     await page.locator('#mobileMenuBtn').click();
