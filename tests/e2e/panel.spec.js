@@ -154,6 +154,34 @@ test("移动菜单退出动画完成后才释放页面锁", async ({ page }) => 
     .toBe(false);
 });
 
+test("移动菜单快速关闭再打开不会被旧动画释放页面锁", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const menu = page.locator("#sideMenu");
+  const button = page.locator("#mobileMenuBtn");
+  await button.click();
+  await expect(menu).toHaveClass(/open/);
+  await page.evaluate(() => document.querySelector("#menuShade").click());
+  await page.evaluate(() => document.querySelector("#mobileMenuBtn").click());
+  await page.waitForTimeout(420);
+  await expect(menu).toHaveClass(/open/);
+  await expect(page.locator("body")).toHaveClass(/menuOpen/);
+});
+
+test("弹窗退出不会被子元素动画提前结束", async ({ page }) => {
+  const trigger = page.locator('[data-target="commandsSection"]');
+  await trigger.click();
+  await page.locator("#commandsSection button").click();
+  const modal = page.locator("#commandsModal");
+  await expect(modal).toBeVisible();
+  await page.keyboard.press("Escape");
+  await modal.locator(".modalHead").dispatchEvent("animationend", {
+    animationName: "spin",
+  });
+  await page.waitForTimeout(60);
+  await expect(modal).not.toHaveClass(/hidden/);
+  await expect(modal).toHaveClass(/hidden/, { timeout: 600 });
+});
+
 test("弹窗保持焦点陷阱并恢复触发按钮焦点", async ({ page }) => {
   const trigger = page.locator('[data-target="commandsSection"]');
   await trigger.click();
