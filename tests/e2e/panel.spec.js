@@ -56,7 +56,46 @@ test("侧栏版本入口可检查更新并展示回滚版本", async ({ page }) 
   await expect(page.locator("#versionUpdateDot")).not.toHaveClass(/hidden/);
   await expect(page.locator("#versionUpdateBtn")).toBeVisible();
   await expect(page.locator("#versionRollbackList")).toContainText("v1.1.4");
-  await expect(page.locator("[data-rollback-id]")).toHaveText("回滚");
+  await expect(page.locator("[data-rollback-id]")).toHaveText("回滚到此版本");
+});
+
+test("移动端版本管理以内联折叠区展示且空回滚状态可见", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#mobileMenuBtn").click();
+  await page.locator("#versionBadgeBtn").click();
+  const control = page.locator(".versionControl");
+  const popover = page.locator("#versionPopover");
+  await expect(popover).toBeVisible();
+  await expect(popover).toContainText("可回滚版本");
+  await expect(popover).toContainText("暂无可回滚版本");
+  const [controlBox, popoverBox] = await Promise.all([
+    control.boundingBox(),
+    popover.boundingBox(),
+  ]);
+  expect(controlBox).not.toBeNull();
+  expect(popoverBox).not.toBeNull();
+  expect(popoverBox.x).toBeGreaterThanOrEqual(controlBox.x - 1);
+  expect(popoverBox.x + popoverBox.width).toBeLessThanOrEqual(
+    controlBox.x + controlBox.width + 1,
+  );
+});
+
+test("检查更新按钮有完整的检查中与结果过渡状态", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#mobileMenuBtn").click();
+  await page.locator("#versionBadgeBtn").click();
+  const button = page.locator("#versionRefreshBtn");
+  await button.click();
+  await expect(button).toHaveAttribute("aria-busy", "true");
+  await expect(button).toContainText("正在检查");
+  await expect(page.locator(".versionCheckSpinner")).toHaveCount(1);
+  await expect(page.locator(".versionCheckSpinner")).toHaveCSS(
+    "animation-name",
+    "versionSpin",
+  );
+  await expect(page.locator(".versionControl")).toHaveClass(/checking/);
+  await expect(button).toContainText("检查更新", { timeout: 3000 });
+  await expect(page.locator("#versionPopoverHint")).toHaveClass(/checkDone/);
 });
 
 test("管理员登录卡片在桌面和手机视口中居中", async ({ page }) => {
