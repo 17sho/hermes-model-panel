@@ -2,7 +2,6 @@
 set -Eeuo pipefail
 
 REPO="${PANEL_UPDATE_REPO:-17sho/hermes-model-panel}"
-BRANCH="${PANEL_UPDATE_BRANCH:-main}"
 INSTALL_DIR="${PANEL_INSTALL_DIR:-/opt/hermes-model-panel}"
 SERVICE="${PANEL_SERVICE:-hermes-model-panel.service}"
 STATE_DIR="${PANEL_UPDATE_STATE_DIR:-/var/lib/hermes-model-panel}"
@@ -38,24 +37,77 @@ cleanup() { rm -rf "$work"; }
 trap cleanup EXIT
 trap 'json_status failed "更新失败（第 ${LINENO} 行）" "${sha:-}"' ERR
 
-json_status downloading "正在下载 GitHub 更新"
-api="https://api.github.com/repos/${REPO}/commits/${BRANCH}"
-sha="$(curl --fail --silent --show-error --location --max-time 30 \
-  -H 'Accept: application/vnd.github+json' "$api" | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha"])')"
+json_status downloading "正在下载并验证 GitHub Release"
+release_api="https://api.github.com/repos/${REPO}/releases/latest"
+curl --fail --silent --show-error --location --max-time 30 \
+  -H 'Accept: application/vnd.github+json' "$release_api" -o "$work/release.json"
+readarray -t release_info < <(python3 - "$work/release.json" <<'PY'
+import json, re, sys
+release = json.load(open(sys.argv[1]))
+tag = str(release.get("tag_name") or "")
+if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
+    raise SystemExit("invalid release tag")
+assets = {str(x.get("name")): str(x.get("browser_download_url")) for x in release.get("assets", [])}
+for name in ("hermes-model-panel.tar.gz", "SHA256SUMS"):
+    if not assets.get(name):
+        raise SystemExit(f"missing release asset: {name}")
+print(tag)
+print(assets["hermes-model-panel.tar.gz"])
+print(assets["SHA256SUMS"])
+PY
+)
+tag="${release_info[0]}"
+archive_url="${release_info[1]}"
+sums_url="${release_info[2]}"
+
+ref_api="https://api.github.com/repos/${REPO}/git/ref/tags/${tag}"
+curl --fail --silent --show-error --location --max-time 30 \
+  -H 'Accept: application/vnd.github+json' "$ref_api" -o "$work/ref.json"
+readarray -t ref_info < <(python3 - "$work/ref.json" <<'PY'
+import json, sys
+obj = json.load(open(sys.argv[1])).get("object") or {}
+print(obj.get("type") or "")
+print(obj.get("sha") or "")
+print(obj.get("url") or "")
+PY
+)
+if [[ "${ref_info[0]}" == "tag" ]]; then
+  curl --fail --silent --show-error --location --max-time 30 \
+    -H 'Accept: application/vnd.github+json' "${ref_info[2]}" -o "$work/tag.json"
+  sha="$(python3 - "$work/tag.json" <<'PY'
+import json, sys
+print((json.load(open(sys.argv[1])).get("object") or {}).get("sha") or "")
+PY
+)"
+else
+  sha="${ref_info[1]}"
+fi
 [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
 if [[ -n "$EXPECTED_SHA" && "$sha" != "$EXPECTED_SHA" ]]; then
-  json_status failed "远端版本已变化，请重新检查后更新" "$sha"
+  json_status failed "Release 已变化，请重新检查后更新" "$sha"
   exit 1
 fi
 
-archive="$work/source.tar.gz"
-curl --fail --silent --show-error --location --max-time 120 \
-  "https://github.com/${REPO}/archive/${sha}.tar.gz" -o "$archive"
+archive="$work/hermes-model-panel.tar.gz"
+sums="$work/SHA256SUMS"
+curl --fail --silent --show-error --location --max-time 120 "$archive_url" -o "$archive"
+curl --fail --silent --show-error --location --max-time 30 "$sums_url" -o "$sums"
+expected_hash="$(awk '$2 == "hermes-model-panel.tar.gz" || $2 == "*hermes-model-panel.tar.gz" {print $1; exit}' "$sums")"
+[[ "$expected_hash" =~ ^[0-9a-fA-F]{64}$ ]]
+printf '%s  %s\n' "$expected_hash" "$archive" | sha256sum --check --status
+
 mkdir "$work/source"
 tar -xzf "$archive" --strip-components=1 -C "$work/source"
 [[ -f "$work/source/package.json" && -f "$work/source/server.js" ]]
+release_version="${tag#v}"
+python3 - "$work/source/package.json" "$release_version" <<'PY'
+import json, sys
+actual = str(json.load(open(sys.argv[1])).get("version") or "")
+if actual != sys.argv[2]:
+    raise SystemExit(f"release version mismatch: {actual}")
+PY
 
-json_status verifying "正在安装依赖并执行检查" "$sha"
+json_status verifying "制品校验通过，正在安装依赖并执行检查" "$sha"
 (
   cd "$work/source"
   npm ci --omit=dev --ignore-scripts
@@ -65,6 +117,9 @@ json_status verifying "正在安装依赖并执行检查" "$sha"
 )
 printf '%s\n' "$sha" >"$work/source/.panel-version"
 chmod 600 "$work/source/.panel-version"
+find "$work/source" -type f -exec chmod go-w {} +
+find "$work/source" -type d -exec chmod go-w {} +
+chmod 755 "$work/source/scripts/update-panel.sh"
 
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 backup="${INSTALL_DIR}.rollback-${stamp}"

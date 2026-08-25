@@ -16,6 +16,7 @@ import { execFileAsync } from './src/lib/process-runner.js';
 import { createRequireAuth } from './src/middleware/auth.js';
 import { securityHeadersAndOrigin } from './src/middleware/csrf.js';
 import { mapConcurrent, readResponseText } from './src/lib/http-safety.js';
+import { safeOutboundFetch, Semaphore } from './src/lib/outbound-http.js';
 const PORT = Number(process.env.PORT || 3010);
 const HERMES_CONFIG = process.env.HERMES_CONFIG || '/root/.hermes/config.yaml';
 const HERMES_HOME = process.env.HERMES_HOME || path.dirname(HERMES_CONFIG);
@@ -25,6 +26,16 @@ const PANEL_UPDATE_BRANCH = process.env.PANEL_UPDATE_BRANCH || 'main';
 const PANEL_UPDATE_SCRIPT = process.env.PANEL_UPDATE_SCRIPT || path.join(process.cwd(), 'scripts', 'update-panel.sh');
 const PANEL_UPDATE_STATE = process.env.PANEL_UPDATE_STATE || '/var/lib/hermes-model-panel/update-status.json';
 const PANEL_VERSION_FILE = process.env.PANEL_VERSION_FILE || path.join(process.cwd(), '.panel-version');
+const OUTBOUND_CONCURRENCY = Number.parseInt(process.env.OUTBOUND_CONCURRENCY || '8', 10);
+const outboundSemaphore = new Semaphore(Number.isInteger(OUTBOUND_CONCURRENCY) && OUTBOUND_CONCURRENCY > 0 ? OUTBOUND_CONCURRENCY : 8);
+
+async function withOutboundResponse(url, init, consumer) {
+  return outboundSemaphore.run(async () => {
+    const { response, close } = await safeOutboundFetch(url, init);
+    try { return await consumer(response); }
+    finally { await close(); }
+  });
+}
 
 function titleCase(s) {
   return String(s || '').replace(/(^|[-_])([a-z])/g, (_, a, b) => (a ? ' ' : '') + b.toUpperCase());
@@ -73,10 +84,6 @@ function validGithubRepo(value) {
   return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(String(value || ''));
 }
 
-function validGitRef(value) {
-  return /^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/.test(String(value || '')) && !String(value).includes('..');
-}
-
 async function readInstalledPanelSha() {
   try {
     const value = (await fs.readFile(PANEL_VERSION_FILE, 'utf8')).trim();
@@ -89,28 +96,41 @@ async function readInstalledPanelSha() {
   } catch { return ''; }
 }
 
-async function fetchGithubPanelSha() {
-  if (!validGithubRepo(PANEL_UPDATE_REPO) || !validGitRef(PANEL_UPDATE_BRANCH)) throw new Error('在线更新源配置无效');
-  const response = await fetch(`https://api.github.com/repos/${PANEL_UPDATE_REPO}/commits/${encodeURIComponent(PANEL_UPDATE_BRANCH)}`, {
-    headers: { accept: 'application/vnd.github+json', 'user-agent': 'hermes-model-panel-updater' },
+async function fetchGithubReleaseInfo() {
+  if (!validGithubRepo(PANEL_UPDATE_REPO)) throw new Error('在线更新源配置无效');
+  const headers = { accept: 'application/vnd.github+json', 'user-agent': 'hermes-model-panel-updater' };
+  const releaseResponse = await fetch(`https://api.github.com/repos/${PANEL_UPDATE_REPO}/releases/latest`, {
+    headers,
     signal: globalThis.AbortSignal.timeout(15000),
   });
-  if (!response.ok) throw new Error(`GitHub 版本检查失败（HTTP ${response.status}）`);
-  const data = await response.json();
-  const sha = String(data.sha || '');
-  if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error('GitHub 返回了无效版本号');
-  return sha;
+  if (!releaseResponse.ok) throw new Error(`GitHub Release 检查失败（HTTP ${releaseResponse.status}）`);
+  const release = await releaseResponse.json();
+  const tag = String(release.tag_name || '');
+  if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw new Error('GitHub 返回了无效 Release 标签');
+  const refResponse = await fetch(`https://api.github.com/repos/${PANEL_UPDATE_REPO}/git/ref/tags/${encodeURIComponent(tag)}`, {
+    headers,
+    signal: globalThis.AbortSignal.timeout(15000),
+  });
+  if (!refResponse.ok) throw new Error(`GitHub Release 引用检查失败（HTTP ${refResponse.status}）`);
+  let ref = await refResponse.json();
+  if (ref.object?.type === 'tag') {
+    const tagResponse = await fetch(ref.object.url, { headers, signal: globalThis.AbortSignal.timeout(15000) });
+    if (!tagResponse.ok) throw new Error(`GitHub Release 标签解析失败（HTTP ${tagResponse.status}）`);
+    ref = await tagResponse.json();
+  }
+  const sha = String(ref.object?.sha || '');
+  if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error('GitHub Release 返回了无效提交号');
+  const assets = Array.isArray(release.assets) ? release.assets.map((asset) => String(asset.name || '')) : [];
+  if (!assets.includes('hermes-model-panel.tar.gz') || !assets.includes('SHA256SUMS')) throw new Error('最新 Release 缺少已校验更新制品');
+  return { sha, version: tag.slice(1), tag };
+}
+
+async function fetchGithubPanelSha() {
+  return (await fetchGithubReleaseInfo()).sha;
 }
 
 async function fetchGithubPanelVersion() {
-  if (!validGithubRepo(PANEL_UPDATE_REPO) || !validGitRef(PANEL_UPDATE_BRANCH)) throw new Error('在线更新源配置无效');
-  const response = await fetch(`https://raw.githubusercontent.com/${PANEL_UPDATE_REPO}/${encodeURIComponent(PANEL_UPDATE_BRANCH)}/package.json`, {
-    headers: { accept: 'application/json', 'user-agent': 'hermes-model-panel-updater' },
-    signal: globalThis.AbortSignal.timeout(15000),
-  });
-  if (!response.ok) throw new Error(`GitHub 版本信息获取失败（HTTP ${response.status}）`);
-  const remotePackage = await response.json();
-  return String(remotePackage.version || '').trim() || null;
+  return (await fetchGithubReleaseInfo()).version;
 }
 
 async function readPanelUpdateStatus() {
@@ -590,8 +610,11 @@ async function restoreConfigBackup(configPath, backup) {
 function redactKey(key = '') {
   const s = String(key || '');
   if (!s) return '';
-  if (s.length <= 12) return '***';
-  return `${s.slice(0, 6)}...${s.slice(-4)}`;
+  return '••••••••';
+}
+
+function publicBackupId(backup = '') {
+  return path.basename(String(backup || ''));
 }
 
 function slugName(name = '') {
@@ -1039,8 +1062,10 @@ async function fetchProviderModelsDirect(baseUrl, apiKey, apiMode) {
     headers.authorization = `Bearer ${apiKey}`;
   }
   try {
-    const res = await fetch(url, { method: 'GET', headers, signal: ac.signal });
-    const raw = await readResponseText(res, 4 * 1024 * 1024);
+    const { res, raw } = await withOutboundResponse(url, { method: 'GET', headers, signal: ac.signal }, async (response) => ({
+      res: response,
+      raw: await readResponseText(response, 4 * 1024 * 1024),
+    }));
     let data = null;
     try { data = JSON.parse(raw); } catch {}
     const models = extractModelIds(data);
@@ -1058,13 +1083,12 @@ async function callMimoAudio(provider, payload, timeoutMs = 90000) {
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), timeoutMs);
   try {
-    const res = await fetch(endpoint(provider.base_url || 'https://api.xiaomimimo.com/v1', '/chat/completions'), {
+    const { res, raw } = await withOutboundResponse(endpoint(provider.base_url || 'https://api.xiaomimimo.com/v1', '/chat/completions'), {
       method: 'POST',
       headers: openAIHeaders(provider),
       body: JSON.stringify(payload),
       signal: ac.signal,
-    });
-    const raw = await readResponseText(res, 50 * 1024 * 1024);
+    }, async (response) => ({ res: response, raw: await readResponseText(response, 50 * 1024 * 1024) }));
     let data = null;
     try { data = JSON.parse(raw); } catch {}
     const err = data?.error?.message || data?.error || (!res.ok ? raw.slice(0, 1000) : '');
@@ -1102,8 +1126,10 @@ async function testProvider(provider, model, message) {
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), 20000);
   try {
-    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload), signal: ac.signal });
-    const raw = await readResponseText(res, 4 * 1024 * 1024);
+    const { res, raw } = await withOutboundResponse(url, { method: 'POST', headers, body: JSON.stringify(payload), signal: ac.signal }, async (response) => ({
+      res: response,
+      raw: await readResponseText(response, 4 * 1024 * 1024),
+    }));
     let data = null;
     try { data = JSON.parse(raw); } catch {}
     const text = pickText(data, apiMode).trim();
@@ -1321,7 +1347,7 @@ router.post('/providers', async (ctx) => {
     });
     try { await rememberProviderMeta(meta.provider, meta.index); }
     catch { await restoreConfigBackup(HERMES_CONFIG, backup); throw new Error('中转站元数据保存失败，配置已回滚'); }
-    ctx.body = { ok: true, backup, state: await publicState(cfg) };
+    ctx.body = { ok: true, backup: publicBackupId(backup), state: await publicState(cfg) };
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message };
@@ -1344,7 +1370,7 @@ router.put('/providers/:idx', async (ctx) => {
       return p;
     });
     await rememberProviderMeta(p, idx);
-    ctx.body = { ok: true, backup, state: await publicState(cfg) };
+    ctx.body = { ok: true, backup: publicBackupId(backup), state: await publicState(cfg) };
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message };
@@ -1360,7 +1386,7 @@ router.delete('/providers/:idx', async (ctx) => {
       cfg.custom_providers.splice(idx, 1);
       rebuildQuickCommands(cfg);
     });
-    ctx.body = { ok: true, backup, state: await publicState(cfg) };
+    ctx.body = { ok: true, backup: publicBackupId(backup), state: await publicState(cfg) };
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message };
@@ -1398,7 +1424,7 @@ router.post('/providers/:idx/refresh-models', async (ctx) => {
     });
     ctx.body = {
       ok: true,
-      backup,
+      backup: publicBackupId(backup),
       added: fetched.length,
       kept_default: keepDefault[0] || '',
       state: await publicState(cfg),
@@ -1422,7 +1448,7 @@ router.post('/providers/:idx/models', async (ctx) => {
       if (!p.model) p.model = model;
       rebuildQuickCommands(cfg);
     });
-    ctx.body = { ok: true, backup, state: await publicState(cfg) };
+    ctx.body = { ok: true, backup: publicBackupId(backup), state: await publicState(cfg) };
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message };
@@ -1442,7 +1468,7 @@ router.delete('/providers/:idx/models/:model', async (ctx) => {
       if (p.model === model) p.model = models[0] || '';
       rebuildQuickCommands(cfg);
     });
-    ctx.body = { ok: true, backup, state: await publicState(cfg) };
+    ctx.body = { ok: true, backup: publicBackupId(backup), state: await publicState(cfg) };
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message };
@@ -1621,7 +1647,7 @@ router.post('/switch', async (ctx) => {
       written.push({ config: agent.config, backup });
     }
     const { cfg } = await loadConfigDoc(HERMES_CONFIG);
-    ctx.body = { ok: true, backups, switched: targets.map((a) => a.id), state: await publicState(cfg) };
+    ctx.body = { ok: true, backups: backups.map(publicBackupId), switched: targets.map((a) => a.id), state: await publicState(cfg) };
   } catch (e) {
     for (const item of written.reverse()) await restoreConfigBackup(item.config, item.backup).catch(() => {});
     ctx.status = 400;
@@ -1677,7 +1703,7 @@ router.post('/image-gen/switch', async (ctx) => {
       written.push({ config: agent.config, backup });
     }
     const { cfg } = await loadConfigDoc(HERMES_CONFIG);
-    ctx.body = { ok: true, backups, switched: targets.map((a) => a.id), state: await publicState(cfg) };
+    ctx.body = { ok: true, backups: backups.map(publicBackupId), switched: targets.map((a) => a.id), state: await publicState(cfg) };
   } catch (e) {
     for (const item of written.reverse()) await restoreConfigBackup(item.config, item.backup).catch(() => {});
     ctx.status = 400;
@@ -2024,8 +2050,7 @@ function envHas(map, key) {
 function maskSecret(v) {
   const s = String(v || '').trim();
   if (!s) return '';
-  if (s.length <= 8) return '••••';
-  return `${s.slice(0, 4)}••••${s.slice(-4)}`;
+  return '••••••••';
 }
 
 async function readAgentPlatforms(agent, gatewaySnapshot = null) {
@@ -2147,7 +2172,7 @@ router.delete('/chat-platforms/:agent/:platform', async (ctx) => {
 
 router.post('/rebuild-commands', async (ctx) => {
   const { cfg, backup } = await updateConfig((cfg) => { rebuildQuickCommands(cfg); });
-  ctx.body = { ok: true, backup, state: await publicState(cfg) };
+  ctx.body = { ok: true, backup: publicBackupId(backup), state: await publicState(cfg) };
 });
 
 router.post('/agents', async (ctx) => {
@@ -2382,7 +2407,7 @@ router.post('/toolsets', async (ctx) => {
       cfg.agent = cfg.agent && typeof cfg.agent === 'object' ? cfg.agent : {};
       cfg.agent.disabled_toolsets = Array.isArray(cfg.agent.disabled_toolsets) ? cfg.agent.disabled_toolsets.filter((x) => typeof x === 'string' && !enabled.includes(x)) : [];
     }, agent.config);
-    ctx.body = { ok: true, enabled, backup, hint: '已写入该 agent 的 config.yaml。Gateway 在跑请到设置里重启后才生效。' };
+    ctx.body = { ok: true, enabled, backup: publicBackupId(backup), hint: '已写入该 agent 的 config.yaml。Gateway 在跑请到设置里重启后才生效。' };
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message };
@@ -2436,7 +2461,7 @@ router.post('/skills', async (ctx) => {
       cfg.skills = cfg.skills && typeof cfg.skills === 'object' ? cfg.skills : {};
       cfg.skills.disabled = disabled;
     }, agent.config);
-    ctx.body = { ok: true, disabled, backup, hint: '已写入该 agent 的 skills.disabled。Gateway 在跑请到设置里重启后才生效。' };
+    ctx.body = { ok: true, disabled, backup: publicBackupId(backup), hint: '已写入该 agent 的 skills.disabled。Gateway 在跑请到设置里重启后才生效。' };
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message };
@@ -2571,7 +2596,6 @@ router.post('/panel-update', async (ctx) => {
     await execFileAsync('systemd-run', [
       '--unit', unit, '--collect', '--property=Type=exec',
       '--setenv', `PANEL_UPDATE_REPO=${PANEL_UPDATE_REPO}`,
-      '--setenv', `PANEL_UPDATE_BRANCH=${PANEL_UPDATE_BRANCH}`,
       PANEL_UPDATE_SCRIPT, expected,
     ], { timeout: 10000 });
     ctx.status = 202;
