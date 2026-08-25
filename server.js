@@ -102,6 +102,28 @@ async function fetchGithubPanelSha() {
 async function readPanelUpdateStatus() {
   try { return JSON.parse(await fs.readFile(PANEL_UPDATE_STATE, 'utf8')); } catch { return { state: 'idle', message: '尚未执行在线更新' }; }
 }
+async function listPanelRollbacks() {
+  const installDir = path.resolve(process.env.PANEL_INSTALL_DIR || '/opt/hermes-model-panel');
+  const parent = path.dirname(installDir);
+  const prefix = `${path.basename(installDir)}.rollback-`;
+  let entries = [];
+  try { entries = await fs.readdir(parent, { withFileTypes: true }); } catch { return []; }
+  const rollbacks = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.startsWith(prefix)) continue;
+    const directory = path.join(parent, entry.name);
+    try {
+      const [pkg, stat] = await Promise.all([
+        fs.readFile(path.join(directory, 'package.json'), 'utf8').then(JSON.parse),
+        fs.stat(directory),
+      ]);
+      let sha = '';
+      try { sha = (await fs.readFile(path.join(directory, '.panel-version'), 'utf8')).trim(); } catch { /* legacy backup */ }
+      rollbacks.push({ id: entry.name.slice(prefix.length), version: String(pkg.version || '-'), sha, created_at: stat.mtime.toISOString() });
+    } catch { /* ignore incomplete backup */ }
+  }
+  return rollbacks.sort((a, b) => b.id.localeCompare(a.id)).slice(0, 2);
+}
 const PANEL_META_PATH = process.env.PANEL_META_PATH || '/root/.hermes/model-panel-meta.json';
 const DEFAULT_OPENAI_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 
@@ -2442,8 +2464,8 @@ router.post('/gateway-control', async (ctx) => {
 
 router.get('/panel-update', async (ctx) => {
   try {
-    const [installed_sha, latest_sha, status] = await Promise.all([
-      readInstalledPanelSha(), fetchGithubPanelSha(), readPanelUpdateStatus(),
+    const [installed_sha, latest_sha, status, rollbacks] = await Promise.all([
+      readInstalledPanelSha(), fetchGithubPanelSha(), readPanelUpdateStatus(), listPanelRollbacks(),
     ]);
     ctx.body = {
       ok: true,
@@ -2454,6 +2476,7 @@ router.get('/panel-update', async (ctx) => {
       latest_sha,
       update_available: !installed_sha || installed_sha !== latest_sha,
       status,
+      rollbacks,
     };
   } catch (e) {
     ctx.status = 502;
@@ -2480,6 +2503,30 @@ router.post('/panel-update', async (ctx) => {
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: publicError(e, '启动在线更新失败') };
+  }
+});
+
+router.post('/panel-rollback', async (ctx) => {
+  try {
+    const id = String(ctx.request.body?.id || '').trim();
+    const rollbacks = await listPanelRollbacks();
+    const target = rollbacks.find((item) => item.id === id);
+    if (!target) throw new Error('请选择仍然存在的回滚版本');
+    const installDir = path.resolve(process.env.PANEL_INSTALL_DIR || '/opt/hermes-model-panel');
+    const script = path.resolve(process.env.PANEL_ROLLBACK_SCRIPT || path.join(process.cwd(), 'scripts/rollback-panel.sh'));
+    await fs.access(script, fssync.constants.X_OK);
+    const directory = `${installDir}.rollback-${id}`;
+    const unit = `hermes-model-panel-rollback-${Date.now()}`;
+    await execFileAsync('systemd-run', [
+      '--unit', unit, '--collect', '--property=Type=exec',
+      '--setenv', `PANEL_INSTALL_DIR=${installDir}`,
+      script, directory,
+    ], { timeout: 10000 });
+    ctx.status = 202;
+    ctx.body = { ok: true, state: 'started', target };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: publicError(e, '启动版本回滚失败') };
   }
 });
 

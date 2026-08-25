@@ -28,6 +28,37 @@ test("13 页导航保留 SVG，移动菜单可重复开关", async ({ page }) =>
   }
 });
 
+test("侧栏版本入口可检查更新并展示回滚版本", async ({ page }) => {
+  await page.route("**/api/panel-update", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        version: "1.2.0",
+        installed_sha: "a".repeat(40),
+        latest_sha: "b".repeat(40),
+        update_available: true,
+        status: { state: "idle" },
+        rollbacks: [
+          {
+            id: "20260825T012101Z",
+            version: "1.1.4",
+            sha: "c".repeat(40),
+            created_at: "2026-08-25T01:21:01Z",
+          },
+        ],
+      }),
+    });
+  });
+  await page.locator("#versionBadgeBtn").click();
+  await expect(page.locator("#versionPopover")).toBeVisible();
+  await expect(page.locator("#versionPopoverNumber")).toHaveText("v1.2.0");
+  await expect(page.locator("#versionUpdateDot")).not.toHaveClass(/hidden/);
+  await expect(page.locator("#versionUpdateBtn")).toBeVisible();
+  await expect(page.locator("#versionRollbackList")).toContainText("v1.1.4");
+  await expect(page.locator("[data-rollback-id]")).toHaveText("回滚");
+});
+
 test("管理员登录卡片在桌面和手机视口中居中", async ({ page }) => {
   await page.route("**/state", (route) =>
     route.fulfill({

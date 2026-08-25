@@ -30,7 +30,7 @@
         <header class="loginHead">
           <div class="loginMark" aria-hidden="true">◆</div>
           <div class="loginBrand">
-            <span>HERMES PANEL · v1.1.4</span>
+            <span>HERMES PANEL · v1.2.0</span>
             <h1 id="loginTitle">登录模型台</h1>
           </div>
         </header>
@@ -74,7 +74,55 @@
       ></div>
       <aside id="sideMenu" class="sideMenu" aria-label="功能菜单">
         <header class="sideBrand">
-          <b>Hermes 模型台</b><span>CONTROL CONSOLE · v1.1.4</span>
+          <b>Hermes 模型台</b>
+          <div class="versionControl">
+            <button
+              id="versionBadgeBtn"
+              class="versionBadge"
+              type="button"
+              aria-expanded="false"
+              aria-controls="versionPopover"
+            >
+              <span
+                >CONTROL CONSOLE ·
+                <strong id="sidePanelVersion">v1.2.0</strong></span
+              >
+              <i
+                id="versionUpdateDot"
+                class="versionUpdateDot hidden"
+                aria-hidden="true"
+              ></i>
+            </button>
+            <div id="versionPopover" class="versionPopover hidden">
+              <div class="versionPopoverHead">
+                <span>面板版本</span
+                ><button
+                  id="versionRefreshBtn"
+                  type="button"
+                  title="检查更新"
+                  aria-label="检查更新"
+                >
+                  ↻
+                </button>
+              </div>
+              <div id="versionVisual" class="versionVisual">
+                <strong id="versionPopoverNumber">v1.2.0</strong
+                ><span id="versionStatusMark">✓</span>
+              </div>
+              <p id="versionPopoverHint">正在检查版本…</p>
+              <div id="versionProgress" class="versionProgress hidden">
+                <i></i><span>准备中</span>
+              </div>
+              <button
+                id="versionUpdateBtn"
+                class="primary hidden"
+                type="button"
+              >
+                立即更新
+              </button>
+              <div id="versionRollbackList" class="versionRollbackList"></div>
+            </div>
+          </div>
         </header>
         <nav class="sideNav">
           <div class="navLabel">概览</div>
@@ -769,32 +817,6 @@
                 <p id="gatewayActionHint" class="settingsNote">
                   重启会中断正在运行的任务。
                 </p>
-              </section>
-              <section class="settingsGroup">
-                <div class="settingsGroupHead">
-                  <span class="settingsIcon">06</span>
-                  <div>
-                    <h3>面板在线更新</h3>
-                    <p class="muted">
-                      当前版本 <span id="panelUpdateVersion">v1.1.4</span> · 从
-                      GitHub 获取已发布的最新代码
-                    </p>
-                  </div>
-                </div>
-                <p id="panelUpdateHint" class="settingsNote">
-                  点击检查更新；更新时会备份当前版本并自动重启。
-                </p>
-                <div class="actions">
-                  <button id="checkPanelUpdateBtn" data-static-click="71">
-                    检查更新</button
-                  ><button
-                    id="runPanelUpdateBtn"
-                    class="primary hidden"
-                    data-static-click="72"
-                  >
-                    立即更新
-                  </button>
-                </div>
               </section>
             </div>
           </section>
