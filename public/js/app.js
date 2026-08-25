@@ -245,7 +245,7 @@ async function saveAuthSettings(sourceButton){
   }catch(e){toast(e.message)}
   finally{if(btn){btn.dataset.busy=''; btn.disabled=false}}
 }
-async function logout(){if(!await askConfirm('确定退出模型台？'))return;try{await api('/logout',{method:'POST',body:'{}'});showLogin();toast('已退出')}catch(e){toast(e.message)}}
+async function logout(){if(!await askConfirm('确定退出模型台？'))return;try{const result=await api('/logout',{method:'POST',body:'{}'});applyAuthSettings(result);if(result.logged_out){clearSensitiveClientState();showLogin();toast('已退出')}else{toast('密码保护未开启，无需退出登录')}}catch(e){toast(e.message)}}
 async function logoutAll(sourceButton){if(!await askConfirm('确定让全部设备的登录立即失效？'))return;try{const result=await api('/logout-all',{method:'POST',body:'{}',sourceButton});if(result.password_enabled){invalidateClientSession();return}store.csrfToken=String(result.csrf_token||'');toast('全部旧设备会话已退出，本机无需密码可继续使用')}catch(e){toast(e.message)}}
 
 function imageModelsFor(agentId, current){
@@ -740,7 +740,7 @@ async function controlGateway(agent,action){
     await loadWorkStatus();
   }catch(e){toast(e.message)}
 }
-async function loadState(){const seq=nextRequestSequence('state');try{const s=await api('/state');if(!isLatestRequest('state',seq))return;store.state=s;showApp();renderCurrent(s.current);renderImageGen();renderProviders(s.providers);renderCommands(s.commands);renderTestTargets(s.providers);renderRestartOptions();initPanelPage();loadAuthSettings();serviceStatus()}catch(e){if(!isLatestRequest('state',seq))return;showLogin();toast(e.message)}}
+async function loadState(){const seq=nextRequestSequence('state');try{const s=await api('/state');if(!isLatestRequest('state',seq))return;store.state=s;applyAuthSettings(s);showApp();renderCurrent(s.current);renderImageGen();renderProviders(s.providers);renderCommands(s.commands);renderTestTargets(s.providers);renderRestartOptions();initPanelPage();loadAuthSettings();serviceStatus()}catch(e){if(!isLatestRequest('state',seq))return;showLogin();toast(e.message)}}
 async function serviceStatus(){const seq=nextRequestSequence('serviceStatus');const box=$('serviceStatus'); if(!box)return; try{const s=await api('/service-status');if(!isLatestRequest('serviceStatus',seq))return; const list=s.statuses||[]; store.agentStatus={}; list.forEach(x=>{store.agentStatus[x.profile||x.agent]=x.status}); box.innerHTML=renderTopStatus(list,s.status); const def=list.find(x=>x.agent==='default'||x.profile==='agent1'); const down=!def||!def.ok; $('installGatewayBtn')?.classList.toggle('hidden',!down); $('restartGatewayBtn')?.classList.toggle('hidden',down); if($('gatewayActionHint')) $('gatewayActionHint').textContent=down?'Gateway 尚未运行。点击安装并启动，已填的模型与聊天平台配置会直接生效。':'重启会中断对应 agent 当前正在运行的任务；只在切换配置未生效或需要刷新聊天平台配置时使用。'; if(store.state) renderCurrent(store.state.current)}catch(e){if(!isLatestRequest('serviceStatus',seq))return;if(e?.code==='NEED_LOGIN'){showLogin();return}box.innerHTML=renderStatusChip('Gateway','unknown')}}
 async function addProvider(){try{const body={name:$('addName').value,base_url:$('addUrl').value,api_key:$('addKey').value,api_mode:$('addMode').value,model:$('addModel').value,models:$('addModels').value};const r=await api('/providers',{method:'POST',body:JSON.stringify(body)});store.state=r.state;renderCurrent(store.state.current);renderProviders(store.state.providers);renderCommands(store.state.commands);renderTestTargets(store.state.providers);toast('已添加中转站')}catch(e){toast(e.message)}}
 async function fetchModelsForAdd(sourceButton){

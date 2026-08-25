@@ -158,6 +158,15 @@ for (const width of [320, 390]) {
   });
 }
 
+test("退出按钮只在密码保护开启时显示", async ({ page }) => {
+  const logout = page.locator("#logoutBtn");
+  await expect(logout).toBeHidden();
+  await logout.evaluate((element) => element.classList.toggle("hidden", false));
+  await expect(logout).toBeVisible();
+  await logout.evaluate((element) => element.classList.toggle("hidden", true));
+  await expect(logout).toBeHidden();
+});
+
 test("面板安全保存按钮会提交密码与开关设置", async ({ page }) => {
   const requests = [];
   await page.route("**/api/{change-password,auth-settings}", async (route) => {

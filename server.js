@@ -1090,8 +1090,12 @@ router.post('/login', async (ctx) => {
 });
 
 router.post('/logout', async (ctx) => {
+  if (AUTH_DISABLED) {
+    ctx.body = sessionPublicStatus(ctx, { logged_out: false });
+    return;
+  }
   ctx.cookies.set(COOKIE_NAME, '', cookieOptions(ctx, { maxAge: 0 }));
-  ctx.body = { ok: true };
+  ctx.body = { ...authPublicStatus(), logged_out: true };
 });
 
 router.get('/auth-settings', async (ctx) => {
@@ -1177,7 +1181,7 @@ router.get('/usage', async (ctx) => {
 
 router.get('/state', async (ctx) => {
   const { cfg } = await loadConfigDoc();
-  ctx.body = await publicState(cfg);
+  ctx.body = { ...(await publicState(cfg)), ...sessionPublicStatus(ctx) };
 });
 
 
