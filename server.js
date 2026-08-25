@@ -212,6 +212,19 @@ const PUBLIC_DIR = path.join(process.cwd(), 'public');
 const COOKIE_NAME = 'hmp_session';
 const COOKIE_PATH = process.env.COOKIE_PATH || '/';
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '';
+const PUBLIC_ORIGIN = process.env.PUBLIC_ORIGIN || '';
+let PUBLIC_ORIGIN_URL = null;
+try {
+  if (PUBLIC_ORIGIN) PUBLIC_ORIGIN_URL = new URL(PUBLIC_ORIGIN);
+} catch {
+  console.error('PUBLIC_ORIGIN 必须是有效的 http(s) 站点根地址');
+  process.exit(1);
+}
+if (PUBLIC_ORIGIN_URL && (!['http:', 'https:'].includes(PUBLIC_ORIGIN_URL.protocol) || PUBLIC_ORIGIN_URL.pathname !== '/' || PUBLIC_ORIGIN_URL.search || PUBLIC_ORIGIN_URL.hash)) {
+  console.error('PUBLIC_ORIGIN 必须是 http(s) 站点根地址，不能包含路径、查询或片段');
+  process.exit(1);
+}
+const COOKIE_SECURE = process.env.COOKIE_SECURE === '1' || PUBLIC_ORIGIN_URL?.protocol === 'https:';
 const TRUST_PROXY_AUTH = process.env.TRUST_PROXY_AUTH === '1';
 const TRUSTED_PROXY_AUTH_HEADER = String(process.env.TRUSTED_PROXY_AUTH_HEADER || 'x-hermes-authenticated').toLowerCase();
 const CLI_AUTH_HEADER = 'x-hermes-cli-auth';
@@ -227,9 +240,21 @@ if (!SESSION_SECRET_PERSISTED) console.warn('SESSION_SECRET 未持久配置：�
 
 const app = new Koa();
 const router = new Router({ prefix: '/api' });
-// Security decisions use the direct socket peer, not client-controlled
-// Forwarded/X-Forwarded-* headers. Production Node listens on loopback.
-app.proxy = false;
+// Koa needs trusted loopback proxy protocol metadata so it can emit Secure
+// cookies over an HTTPS-terminating reverse proxy. Strip forwarded metadata
+// from every non-loopback peer before Koa consumes it; security/rate-limit IP
+// decisions continue to use the direct socket address.
+app.proxy = true;
+app.use(async (ctx, next) => {
+  const peer = String(ctx.req.socket?.remoteAddress || '');
+  const loopback = peer === '127.0.0.1' || peer === '::1' || peer === '::ffff:127.0.0.1';
+  if (!loopback) {
+    for (const name of ['forwarded', 'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port']) {
+      delete ctx.req.headers[name];
+    }
+  }
+  await next();
+});
 
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
@@ -246,7 +271,7 @@ function loginRateRecord(ip, failed = false) {
   return item;
 }
 
-app.use(securityHeadersAndOrigin());
+app.use(securityHeadersAndOrigin({ publicOrigin: PUBLIC_ORIGIN }));
 
 async function updateEnvKey(file, key, value) {
   if (/[\r\n]/.test(String(value))) throw new Error('值不能包含换行');
@@ -306,7 +331,8 @@ function cookieOptions(ctx, extra = {}) {
   return {
     httpOnly: true,
     sameSite: 'lax',
-    secure: ctx.secure || ctx.get('x-forwarded-proto') === 'https',
+    secure: COOKIE_SECURE,
+    overwrite: true,
     maxAge: 7 * 86400 * 1000,
     path: COOKIE_PATH,
     ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
@@ -1106,7 +1132,7 @@ router.post('/login', async (ctx) => {
     ctx.body = { ...authPublicStatus(), password_enabled: false, csrf_token: tokenPayload(token).csrf };
     return;
   }
-  const ip = String(ctx.ip || ctx.request.ip || 'unknown');
+  const ip = String(ctx.req.socket?.remoteAddress || 'unknown');
   const rate = loginRateRecord(ip);
   if (rate.count >= LOGIN_MAX_ATTEMPTS) {
     ctx.set('Retry-After', String(Math.max(1, Math.ceil((LOGIN_WINDOW_MS - (Date.now() - rate.started)) / 1000))));

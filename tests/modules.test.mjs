@@ -82,6 +82,29 @@ test("origin middleware rejects a cross-site mutation", async () => {
   assert.equal(headers.get("X-Frame-Options"), "DENY");
 });
 
+test("origin middleware uses canonical HTTPS origin behind an HTTP proxy", async () => {
+  const middleware = securityHeadersAndOrigin({
+    publicOrigin: "https://panel.test",
+  });
+  const makeContext = (origin) => ({
+    path: "/api/login",
+    method: "POST",
+    host: "127.0.0.1:3010",
+    protocol: "http",
+    set: () => {},
+    get: (key) => (key === "origin" ? origin : ""),
+  });
+  const allowed = makeContext("https://panel.test");
+  let continued = false;
+  await middleware(allowed, () => {
+    continued = true;
+  });
+  assert.equal(continued, true);
+  const rejected = makeContext("http://panel.test");
+  await middleware(rejected, () => assert.fail("must not continue"));
+  assert.equal(rejected.status, 403);
+});
+
 test("bounded upstream reads abort oversized streaming bodies", async () => {
   const makeResponse = (text) => {
     const bytes = Buffer.from(text);

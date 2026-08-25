@@ -62,6 +62,8 @@ process.env.ADMIN_PASSWORD = 'unit-test-password';
 process.env.SESSION_SECRET = 'unit-test-session-secret-that-is-not-production';
 process.env.AUTH_DISABLED = '0';
 process.env.TRUST_PROXY_AUTH = '1';
+process.env.PUBLIC_ORIGIN = 'https://panel.test';
+process.env.COOKIE_SECURE = '1';
 
 const { app, updateConfig, updatePanelMeta, upsertEnvValues } = await import('../server.js');
 
@@ -91,6 +93,16 @@ try {
       method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://evil.invalid' }, body: '{}',
     });
     assert.equal(badOrigin.status, 403, '跨站 Origin 必须拒绝');
+    const canonicalOriginLogin = await fetch(`${base}/api/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'https://panel.test', 'x-forwarded-proto': 'https' },
+      body: JSON.stringify({ password: 'unit-test-password' }),
+    });
+    assert.equal(canonicalOriginLogin.status, 200, 'HTTPS Origin 经 loopback HTTP 反代后必须可登录');
+    const secureCookie = (canonicalOriginLogin.headers.get('set-cookie') || '').toLowerCase();
+    for (const attribute of ['; secure', '; httponly', '; samesite=lax']) {
+      assert.ok(secureCookie.includes(attribute), `生产会话 Cookie 缺少 ${attribute}`);
+    }
 
     const redirectAttack = await fetch(`${base}/auth/check`, {
       redirect: 'manual',
@@ -112,7 +124,7 @@ try {
     const proxyAuthenticated = await fetch(`${base}/api/state`, { headers: { 'x-hermes-authenticated': '1' } });
     assert.equal(proxyAuthenticated.status, 401, '固定值反代认证标记不得绕过登录');
     const login = await fetch(`${base}/api/login`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'unit-test-password' }),
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-proto': 'https' }, body: JSON.stringify({ password: 'unit-test-password' }),
     });
     assert.equal(login.status, 200, '正确密码应保持可登录');
     const cookie = login.headers.get('set-cookie')?.split(';', 1)[0];
@@ -124,7 +136,7 @@ try {
     assert.ok(csrf && !authSettings.headers.get('set-cookie'), 'CSRF token 安全下发且不另设可读 cookie');
     const noCsrf = await fetch(`${base}/api/auth-settings`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ password_enabled: true }) });
     assert.equal(noCsrf.status, 403, '浏览器 mutation 缺 CSRF 必须拒绝');
-    const changed = await fetch(`${base}/api/change-password`, { method: 'POST', headers: { cookie, 'content-type': 'application/json', 'x-csrf-token': csrf }, body: JSON.stringify({ old_password: 'unit-test-password', new_password: 'new-unit-test-password' }) });
+    const changed = await fetch(`${base}/api/change-password`, { method: 'POST', headers: { cookie, 'content-type': 'application/json', 'x-csrf-token': csrf, 'x-forwarded-proto': 'https' }, body: JSON.stringify({ old_password: 'unit-test-password', new_password: 'new-unit-test-password' }) });
     assert.equal(changed.status, 200, '修改密码成功');
     const newCookie = changed.headers.get('set-cookie')?.split(';', 1)[0];
     const oldAfterChange = await fetch(`${base}/api/state`, { headers: { cookie } });

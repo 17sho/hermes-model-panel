@@ -1,4 +1,16 @@
-export function securityHeadersAndOrigin() {
+export function securityHeadersAndOrigin({ publicOrigin = "" } = {}) {
+  let canonicalOrigin = "";
+  if (publicOrigin) {
+    const parsed = new URL(publicOrigin);
+    if (
+      !["http:", "https:"].includes(parsed.protocol) ||
+      parsed.pathname !== "/"
+    ) {
+      throw new Error("PUBLIC_ORIGIN 必须是 http(s) 站点根地址");
+    }
+    canonicalOrigin = parsed.origin;
+  }
+
   return async (ctx, next) => {
     ctx.set("X-Content-Type-Options", "nosniff");
     ctx.set("X-Frame-Options", "DENY");
@@ -13,9 +25,8 @@ export function securityHeadersAndOrigin() {
       if (origin) {
         let allowed = false;
         try {
-          const parsed = new URL(origin);
-          allowed =
-            parsed.host === ctx.host && parsed.protocol === `${ctx.protocol}:`;
+          const expected = canonicalOrigin || `${ctx.protocol}://${ctx.host}`;
+          allowed = new URL(origin).origin === expected;
         } catch {}
         if (!allowed) {
           ctx.status = 403;
