@@ -22,7 +22,7 @@
           : "#f4f6f8";
       } catch {}
     </script>
-    <link rel="stylesheet" href="css/app.css?v=v1.3.1" />
+    <link rel="stylesheet" href="css/app.css?v=v1.3.2" />
   </head>
   <body>
     <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -30,7 +30,7 @@
         <header class="loginHead">
           <div class="loginMark" aria-hidden="true">◆</div>
           <div class="loginBrand">
-            <span>HERMES PANEL · v1.3.1</span>
+            <span>HERMES PANEL · v1.3.2</span>
             <h1 id="loginTitle">登录模型台</h1>
           </div>
         </header>
@@ -85,7 +85,7 @@
             >
               <span class="versionBadgeCopy">
                 <small>控制台版本</small>
-                <strong id="sidePanelVersion">v1.3.1</strong>
+                <strong id="sidePanelVersion">v1.3.2</strong>
                 <em id="versionBadgeState">检查中</em>
               </span>
               <span class="versionChevron" aria-hidden="true">⌄</span>
@@ -99,7 +99,7 @@
               <div class="versionCurrentRow">
                 <span>
                   <small>当前运行</small>
-                  <b id="versionPopoverNumber">v1.3.1</b>
+                  <b id="versionPopoverNumber">v1.3.2</b>
                   <code id="versionCurrentSha">--------</code>
                 </span>
                 <span id="versionStatusMark" class="versionStateChip"
@@ -940,19 +940,21 @@
       aria-labelledby="confirmTitle"
     >
       <div class="modalBackdrop" data-static-click="67"></div>
-      <section class="modalPanel confirmPanel">
-        <div class="confirmMark">!</div>
-        <h2 id="confirmTitle">确认操作</h2>
+      <section class="modalPanel confirmPanel" aria-describedby="confirmMessage">
+        <div class="confirmHead">
+          <div class="confirmMark" aria-hidden="true">!</div>
+          <div><span class="confirmKicker">请确认</span><h2 id="confirmTitle">确认操作</h2></div>
+        </div>
         <p id="confirmMessage" class="muted"></p>
         <div class="confirmActions">
           <button data-static-click="68">取消</button
           ><button id="confirmOkBtn" class="primary" data-static-click="69">
-            确认
+            继续
           </button>
         </div>
       </section>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="js/app.js?v=v1.3.1"></script>
+    <script type="module" src="js/app.js?v=v1.3.2"></script>
   </body>
 </html>
