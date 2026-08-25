@@ -1,6 +1,6 @@
 # Hermes Model Panel
 
-[![版本](https://img.shields.io/badge/version-v1.3.12-6f8cff)](https://github.com/17sho/hermes-model-panel/releases)
+[![版本](https://img.shields.io/badge/version-v1.3.13-6f8cff)](https://github.com/17sho/hermes-model-panel/releases)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520-339933?logo=nodedotjs&logoColor=white)](package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Hermes Agent](https://img.shields.io/badge/for-Hermes%20Agent-111827)](https://github.com/NousResearch/hermes-agent)
@@ -15,17 +15,17 @@
 
 ## 功能
 
-| 模块            | 能力                                                     |
-| --------------- | -------------------------------------------------------- |
-| 模型与中转站    | 添加 OpenAI 兼容中转、获取模型、切换当前模型、可用性测试 |
-| Agent / Profile | 新建和删除 Profile、独立配置模型与服务                   |
-| 聊天平台        | 管理 Telegram、微信、Discord、WhatsApp、Slack、飞书      |
-| 工具与 Skills   | 按 Agent 查看和切换工具包、管理 Skills                   |
-| 会话与上下文    | 查看工作状态、选择历史上下文、生成快捷命令               |
-| Gateway         | 查看状态和原始日志、安装、启动、停止或重启服务           |
-| 安全            | 服务端登录、Session Cookie、CSRF 校验、原子配置写入      |
-| 在线更新        | 检查 GitHub 新版本、后台安装、失败自动回滚               |
-| 响应式界面      | 桌面常驻侧栏、移动抽屉、日间/夜间主题                    |
+| 模块            | 能力                                                       |
+| --------------- | ---------------------------------------------------------- |
+| 模型与中转站    | 添加兼容中转、获取模型、切换和测试，并按中转站授权私网访问 |
+| Agent / Profile | 新建和删除 Profile、独立配置模型与服务                     |
+| 聊天平台        | 管理 Telegram、微信、Discord、WhatsApp、Slack、飞书        |
+| 工具与 Skills   | 按 Agent 查看和切换工具包、管理 Skills                     |
+| 会话与上下文    | 查看工作状态、选择历史上下文、生成快捷命令                 |
+| Gateway         | 查看状态和原始日志、安装、启动、停止或重启服务             |
+| 安全            | 服务端登录、Session Cookie、CSRF 校验、原子配置写入        |
+| 在线更新        | 检查 GitHub 新版本、后台安装、失败自动回滚                 |
+| 响应式界面      | 桌面常驻侧栏、移动抽屉、日间/夜间主题                      |
 
 <p align="center">
   <img src="docs/images/panel-platforms.png" width="49%" alt="聊天平台管理">

@@ -22,7 +22,7 @@
           : "#f4f6f8";
       } catch {}
     </script>
-    <link rel="stylesheet" href="css/app.css?v=v1.3.12" />
+    <link rel="stylesheet" href="css/app.css?v=v1.3.13" />
   </head>
   <body>
     <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -30,7 +30,7 @@
         <header class="loginHead">
           <div class="loginMark" aria-hidden="true">◆</div>
           <div class="loginBrand">
-            <span>HERMES PANEL · v1.3.12</span>
+            <span>HERMES PANEL · v1.3.13</span>
             <h1 id="loginTitle">登录模型台</h1>
           </div>
         </header>
@@ -85,7 +85,7 @@
             >
               <span class="versionBadgeCopy">
                 <small>控制台版本</small>
-                <strong id="sidePanelVersion">v1.3.12</strong>
+                <strong id="sidePanelVersion">v1.3.13</strong>
                 <em id="versionBadgeState">检查中</em>
               </span>
               <span class="versionChevron" aria-hidden="true">⌄</span>
@@ -99,7 +99,7 @@
               <div class="versionCurrentRow">
                 <span>
                   <small>当前运行</small>
-                  <b id="versionPopoverNumber">v1.3.12</b>
+                  <b id="versionPopoverNumber">v1.3.13</b>
                   <code id="versionCurrentSha">--------</code>
                 </span>
                 <span id="versionStatusMark" class="versionStateChip"
@@ -467,6 +467,10 @@
                   一键获取模型
                 </button>
               </div>
+              <label class="providerPrivateSwitch">
+                <input id="addAllowPrivate" type="checkbox" />
+                <span><b>允许访问内网</b><small>仅此中转可访问 10.x、172.16–31.x、192.168.x、CGNAT 和 IPv6 ULA；云元数据等危险地址仍会阻止。</small></span>
+              </label>
               <textarea
                 id="addModels"
                 placeholder="其它模型，每行一个，可选"
@@ -953,6 +957,6 @@
       </section>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="js/app.js?v=v1.3.12"></script>
+    <script type="module" src="js/app.js?v=v1.3.13"></script>
   </body>
 </html>

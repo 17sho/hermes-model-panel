@@ -29,9 +29,9 @@ const PANEL_VERSION_FILE = process.env.PANEL_VERSION_FILE || path.join(process.c
 const OUTBOUND_CONCURRENCY = Number.parseInt(process.env.OUTBOUND_CONCURRENCY || '8', 10);
 const outboundSemaphore = new Semaphore(Number.isInteger(OUTBOUND_CONCURRENCY) && OUTBOUND_CONCURRENCY > 0 ? OUTBOUND_CONCURRENCY : 8);
 
-async function withOutboundResponse(url, init, consumer) {
+async function withOutboundResponse(url, init, consumer, options = {}) {
   return outboundSemaphore.run(async () => {
-    const { response, close } = await safeOutboundFetch(url, init);
+    const { response, close } = await safeOutboundFetch(url, init, options);
     try { return await consumer(response); }
     finally { await close(); }
   });
@@ -215,8 +215,18 @@ function applyProviderMeta(provider, index = 0) {
   if (!provider) return provider;
   const key = stableProviderKey(provider, index);
   const meta = readPanelMeta();
-  const display = meta.providers?.[key]?.display_name;
-  return { ...provider, provider_key: key, ...(display ? { display_name: display } : {}) };
+  const saved = meta.providers?.[key] || {};
+  const display = saved.display_name;
+  return { ...provider, provider_key: key, allow_private_network: saved.allow_private_network === true, ...(display ? { display_name: display } : {}) };
+}
+
+async function rememberProviderPrivateAccess(provider, index, allowed) {
+  const key = stableProviderKey(provider || {}, index);
+  if (!key) throw new Error('中转站标识无效');
+  return updatePanelMeta((meta) => {
+    meta.providers = meta.providers || {};
+    meta.providers[key] = { ...(meta.providers[key] || {}), allow_private_network: allowed === true };
+  });
 }
 
 function stripPanelFields(provider) {
@@ -688,6 +698,7 @@ function upsertProvider(cfg, provider, sourceIndex = 0) {
 }
 
 function normalizeProvider(p, index) {
+  const withMeta = applyProviderMeta(p, index);
   const models = Array.isArray(p.models) ? p.models.filter(Boolean) : [];
   const primaryModel = p.model || models[0] || '';
   const allModels = Array.from(new Set([primaryModel, ...models].filter(Boolean)));
@@ -700,6 +711,7 @@ function normalizeProvider(p, index) {
     model: primaryModel,
     models: allModels,
     api_key_redacted: redactKey(p.api_key),
+    allow_private_network: withMeta.allow_private_network === true,
   };
 }
 
@@ -881,7 +893,7 @@ function ensureProviderFields(body, requireKey = true) {
   if (requireKey && !api_key) throw new Error('API Key 不能为空');
   if (!['chat_completions', 'responses', 'codex_responses', 'anthropic_messages'].includes(api_mode)) throw new Error('API 模式不支持');
   if (!model) throw new Error('默认模型不能为空');
-  return { name, base_url, api_key, api_mode, model, models: cleanModels };
+  return { name, base_url, api_key, api_mode, model, models: cleanModels, allow_private_network: body.allow_private_network === true };
 }
 
 
@@ -1048,7 +1060,7 @@ function extractModelIds(data) {
   }).map((x) => String(x || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 }
 
-async function fetchProviderModelsDirect(baseUrl, apiKey, apiMode) {
+async function fetchProviderModelsDirect(baseUrl, apiKey, apiMode, allowPrivate = false) {
   const started = Date.now();
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), 30000);
@@ -1065,7 +1077,7 @@ async function fetchProviderModelsDirect(baseUrl, apiKey, apiMode) {
     const { res, raw } = await withOutboundResponse(url, { method: 'GET', headers, signal: ac.signal }, async (response) => ({
       res: response,
       raw: await readResponseText(response, 4 * 1024 * 1024),
-    }));
+    }), { allowPrivate });
     let data = null;
     try { data = JSON.parse(raw); } catch {}
     const models = extractModelIds(data);
@@ -1088,7 +1100,7 @@ async function callMimoAudio(provider, payload, timeoutMs = 90000) {
       headers: openAIHeaders(provider),
       body: JSON.stringify(payload),
       signal: ac.signal,
-    }, async (response) => ({ res: response, raw: await readResponseText(response, 50 * 1024 * 1024) }));
+    }, async (response) => ({ res: response, raw: await readResponseText(response, 50 * 1024 * 1024) }), { allowPrivate: provider.allow_private_network === true });
     let data = null;
     try { data = JSON.parse(raw); } catch {}
     const err = data?.error?.message || data?.error || (!res.ok ? raw.slice(0, 1000) : '');
@@ -1129,7 +1141,7 @@ async function testProvider(provider, model, message) {
     const { res, raw } = await withOutboundResponse(url, { method: 'POST', headers, body: JSON.stringify(payload), signal: ac.signal }, async (response) => ({
       res: response,
       raw: await readResponseText(response, 4 * 1024 * 1024),
-    }));
+    }), { allowPrivate: provider.allow_private_network === true });
     let data = null;
     try { data = JSON.parse(raw); } catch {}
     const text = pickText(data, apiMode).trim();
@@ -1314,10 +1326,11 @@ router.post('/fetch-models', async (ctx) => {
     const base_url = String(body.base_url || '').trim().replace(/\/$/, '');
     const api_key = String(body.api_key || '').trim();
     const api_mode = String(body.api_mode || 'chat_completions').trim();
+    const allowPrivate = body.allow_private_network === true;
     if (!/^https?:\/\//.test(base_url)) throw new Error('请先填写有效 Base URL');
     if (!api_key) throw new Error('请先填写 API Key');
     if (!['chat_completions', 'responses', 'codex_responses', 'anthropic_messages'].includes(api_mode)) throw new Error('API 模式不支持');
-    const out = await fetchProviderModelsDirect(base_url, api_key, api_mode);
+    const out = await fetchProviderModelsDirect(base_url, api_key, api_mode, allowPrivate);
     if (!out.ok) {
       ctx.status = 400;
       ctx.body = { ok: false, ...out, error: out.error || '没有获取到模型列表；该中转可能不支持 /models' };
@@ -1345,7 +1358,10 @@ router.post('/providers', async (ctx) => {
       rebuildQuickCommands(cfg);
       return { provider: p, index };
     });
-    try { await rememberProviderMeta(meta.provider, meta.index); }
+    try {
+      await rememberProviderMeta(meta.provider, meta.index);
+      await rememberProviderPrivateAccess(meta.provider, meta.index, meta.provider.allow_private_network);
+    }
     catch { await restoreConfigBackup(HERMES_CONFIG, backup); throw new Error('中转站元数据保存失败，配置已回滚'); }
     ctx.body = { ok: true, backup: publicBackupId(backup), state: await publicState(cfg) };
   } catch (e) {
@@ -1393,6 +1409,21 @@ router.delete('/providers/:idx', async (ctx) => {
   }
 });
 
+router.put('/providers/:idx/private-access', async (ctx) => {
+  try {
+    const idx = Number(ctx.params.idx) - 1;
+    const { cfg } = await loadConfigDoc();
+    const provider = cfg.custom_providers?.[idx];
+    if (!provider) throw new Error('中转站不存在');
+    const allowed = ctx.request.body?.allowed === true;
+    await rememberProviderPrivateAccess(provider, idx, allowed);
+    ctx.body = { ok: true, state: await publicState(cfg) };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: e.message };
+  }
+});
+
 router.post('/providers/:idx/refresh-models', async (ctx) => {
   try {
     const idx = Number(ctx.params.idx) - 1;
@@ -1406,7 +1437,7 @@ router.post('/providers/:idx/refresh-models', async (ctx) => {
     const apiMode = String(p.api_mode || 'chat_completions').trim();
     if (!/^https?:\/\//.test(baseUrl)) throw new Error('这个中转没有有效地址');
     if (!apiKey) throw new Error('这个中转没有保存 API Key，无法重新获取');
-    const out = await fetchProviderModelsDirect(baseUrl, apiKey, apiMode);
+    const out = await fetchProviderModelsDirect(baseUrl, apiKey, apiMode, applyProviderMeta(p, idx).allow_private_network);
     if (!out.ok || !(out.models || []).length) {
       ctx.status = 400;
       ctx.body = { ok: false, ...out, error: out.error || '没有获取到模型列表；该中转可能不支持 /models' };
@@ -1560,7 +1591,7 @@ router.post('/test', async (ctx) => {
       // 如果把所有模型都测一遍，几十个模型串行请求会在手机上表现为一直卡住。
       targets = providers.map((p, pi) => {
         const norm = normalizeProvider(p, pi);
-        return { providerIndex: pi + 1, provider: p, provider_name: norm.name, model: norm.model || norm.models[0] || '' };
+        return { providerIndex: pi + 1, provider: applyProviderMeta(p, pi), provider_name: norm.name, model: norm.model || norm.models[0] || '' };
       });
     } else if (body.providerAllModels || providerIndexRaw.startsWith('provider-all:')) {
       const rawId = body.providerAllModels || providerIndexRaw.slice('provider-all:'.length);
@@ -1568,7 +1599,7 @@ router.post('/test', async (ctx) => {
       const p = providers[idx];
       if (!p) throw new Error('中转站不存在');
       const norm = normalizeProvider(p, idx);
-      targets = (norm.models || []).map((model) => ({ providerIndex: idx + 1, provider: p, provider_name: norm.name, model }));
+      targets = (norm.models || []).map((model) => ({ providerIndex: idx + 1, provider: applyProviderMeta(p, idx), provider_name: norm.name, model }));
     } else if (agentId) {
       const agent = getAgent(agentId);
       const { cfg: agentCfg } = await loadConfigDoc(agent.config);
@@ -1584,7 +1615,7 @@ router.post('/test', async (ctx) => {
       if (!p) throw new Error('中转站不存在');
       const norm = normalizeProvider(p, idx);
       const model = String(body.model || norm.model || '').trim();
-      targets = [{ providerIndex: idx + 1, provider: p, provider_name: norm.name, model }];
+      targets = [{ providerIndex: idx + 1, provider: applyProviderMeta(p, idx), provider_name: norm.name, model }];
     }
 
     targets = targets.filter((t) => t.provider?.base_url && t.provider?.api_key && t.model).slice(0, 50);

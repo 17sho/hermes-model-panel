@@ -1,6 +1,6 @@
 # Hermes Model Panel
 
-[![Version](https://img.shields.io/badge/version-v1.3.12-6f8cff)](https://github.com/17sho/hermes-model-panel/releases)
+[![Version](https://img.shields.io/badge/version-v1.3.13-6f8cff)](https://github.com/17sho/hermes-model-panel/releases)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520-339933?logo=nodedotjs&logoColor=white)](package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Hermes Agent](https://img.shields.io/badge/for-Hermes%20Agent-111827)](https://github.com/NousResearch/hermes-agent)
@@ -15,17 +15,17 @@ A responsive web control panel for an existing [Hermes Agent](https://github.com
 
 ## Features
 
-| Area                 | Capabilities                                                                        |
-| -------------------- | ----------------------------------------------------------------------------------- |
-| Models and relays    | Add OpenAI-compatible relays, fetch models, switch active models, test availability |
-| Agents / Profiles    | Create and remove Profiles with independent model and service settings              |
-| Chat platforms       | Manage Telegram, Weixin, Discord, WhatsApp, Slack, and Feishu                       |
-| Tools and Skills     | Inspect and switch toolsets per Agent, manage Skills                                |
-| Sessions and context | Inspect work status, resume historical context, generate quick commands             |
-| Gateway              | Inspect status and raw logs; install, start, stop, or restart services              |
-| Security             | Server-side login, Session cookies, CSRF validation, atomic config writes           |
-| Online updates       | Check GitHub revisions, install in the background, automatically roll back failures |
-| Responsive UI        | Persistent desktop sidebar, mobile drawer, light and dark themes                    |
+| Area                 | Capabilities                                                                                 |
+| -------------------- | -------------------------------------------------------------------------------------------- |
+| Models and relays    | Add compatible relays, fetch and test models, and authorize private-network access per relay |
+| Agents / Profiles    | Create and remove Profiles with independent model and service settings                       |
+| Chat platforms       | Manage Telegram, Weixin, Discord, WhatsApp, Slack, and Feishu                                |
+| Tools and Skills     | Inspect and switch toolsets per Agent, manage Skills                                         |
+| Sessions and context | Inspect work status, resume historical context, generate quick commands                      |
+| Gateway              | Inspect status and raw logs; install, start, stop, or restart services                       |
+| Security             | Server-side login, Session cookies, CSRF validation, atomic config writes                    |
+| Online updates       | Check GitHub revisions, install in the background, automatically roll back failures          |
+| Responsive UI        | Persistent desktop sidebar, mobile drawer, light and dark themes                             |
 
 <p align="center">
   <img src="docs/images/panel-platforms.png" width="49%" alt="Chat platform management">
