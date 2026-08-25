@@ -15,6 +15,7 @@ import { publicError, safeEqual } from './src/lib/errors.js';
 import { execFileAsync } from './src/lib/process-runner.js';
 import { createRequireAuth } from './src/middleware/auth.js';
 import { securityHeadersAndOrigin } from './src/middleware/csrf.js';
+import { mapConcurrent, readResponseText } from './src/lib/http-safety.js';
 const PORT = Number(process.env.PORT || 3010);
 const HERMES_CONFIG = process.env.HERMES_CONFIG || '/root/.hermes/config.yaml';
 const HERMES_HOME = process.env.HERMES_HOME || path.dirname(HERMES_CONFIG);
@@ -226,7 +227,9 @@ if (!SESSION_SECRET_PERSISTED) console.warn('SESSION_SECRET 未持久配置：�
 
 const app = new Koa();
 const router = new Router({ prefix: '/api' });
-app.proxy = true;
+// Security decisions use the direct socket peer, not client-controlled
+// Forwarded/X-Forwarded-* headers. Production Node listens on loopback.
+app.proxy = false;
 
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
@@ -1011,7 +1014,7 @@ async function fetchProviderModelsDirect(baseUrl, apiKey, apiMode) {
   }
   try {
     const res = await fetch(url, { method: 'GET', headers, signal: ac.signal });
-    const raw = await res.text();
+    const raw = await readResponseText(res, 4 * 1024 * 1024);
     let data = null;
     try { data = JSON.parse(raw); } catch {}
     const models = extractModelIds(data);
@@ -1035,7 +1038,7 @@ async function callMimoAudio(provider, payload, timeoutMs = 90000) {
       body: JSON.stringify(payload),
       signal: ac.signal,
     });
-    const raw = await res.text();
+    const raw = await readResponseText(res, 50 * 1024 * 1024);
     let data = null;
     try { data = JSON.parse(raw); } catch {}
     const err = data?.error?.message || data?.error || (!res.ok ? raw.slice(0, 1000) : '');
@@ -1074,7 +1077,7 @@ async function testProvider(provider, model, message) {
   const timer = setTimeout(() => ac.abort(), 20000);
   try {
     const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload), signal: ac.signal });
-    const raw = await res.text();
+    const raw = await readResponseText(res, 4 * 1024 * 1024);
     let data = null;
     try { data = JSON.parse(raw); } catch {}
     const text = pickText(data, apiMode).trim();
@@ -1535,10 +1538,10 @@ router.post('/test', async (ctx) => {
     targets = targets.filter((t) => t.provider?.base_url && t.provider?.api_key && t.model).slice(0, 50);
     if (!targets.length) throw new Error('没有可测试的中转站/模型');
     const startedAll = Date.now();
-    const results = await Promise.all(targets.map(async (t) => {
+    const results = await mapConcurrent(targets, 4, async (t) => {
       const result = await testProvider(t.provider, t.model, message);
       return { providerIndex: t.providerIndex, provider_name: t.provider_name, base_url: t.provider.base_url, ...result };
-    }));
+    });
     ctx.body = { ok: true, message, count: results.length, latency_ms: Date.now() - startedAll, results };
   } catch (e) {
     ctx.status = 400;
@@ -2577,11 +2580,6 @@ router.post('/panel-rollback', async (ctx) => {
   }
 });
 
-const normalJsonParser = bodyParser({ jsonLimit: '1mb' });
-const mimoJsonParser = bodyParser({ jsonLimit: '25mb' });
-app.use(async (ctx, next) => (ctx.path === '/api/mimo/asr' || ctx.path === '/api/mimo/tts')
-  ? mimoJsonParser(ctx, next) : normalJsonParser(ctx, next));
-
 // Caddy forward_auth endpoint. It must be outside /api so every subdomain can
 // ask the shared auth service whether the .23cm.me cookie is valid.
 app.use(async (ctx, next) => {
@@ -2590,10 +2588,13 @@ app.use(async (ctx, next) => {
     ctx.status = 204;
     return;
   }
-  const forwardedHost = ctx.get('x-forwarded-host') || ctx.host || 'hermes.23cm.me';
-  let forwardedUri = ctx.get('x-forwarded-uri') || '/';
+  const allowedHosts = new Set(String(process.env.AUTH_REDIRECT_HOSTS || 'hermes.23cm.me,panel.23cm.me').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean));
+  const candidateHost = String(ctx.get('x-forwarded-host') || '').split(',', 1)[0].trim().toLowerCase();
+  const forwardedHost = allowedHosts.has(candidateHost) ? candidateHost : 'hermes.23cm.me';
+  let forwardedUri = String(ctx.get('x-forwarded-uri') || '/');
+  if (!forwardedUri.startsWith('/') || forwardedUri.startsWith('//') || /[\r\n]/.test(forwardedUri)) forwardedUri = '/';
   if (forwardedHost === 'hermes.23cm.me' && forwardedUri === '/index.html') forwardedUri = '/';
-  const nextUrl = forwardedUri.startsWith('http') ? forwardedUri : `https://${forwardedHost}${forwardedUri}`;
+  const nextUrl = `https://${forwardedHost}${forwardedUri}`;
   ctx.status = 302;
   ctx.redirect(`https://hermes.23cm.me/login?next=${encodeURIComponent(nextUrl)}`);
 });
@@ -2602,6 +2603,10 @@ app.use(async (ctx, next) => {
   if (ctx.path.startsWith('/api/')) return requireAuth(ctx, next);
   return next();
 });
+const normalJsonParser = bodyParser({ jsonLimit: '1mb' });
+const mimoJsonParser = bodyParser({ jsonLimit: '25mb' });
+app.use(async (ctx, next) => (ctx.path === '/api/mimo/asr' || ctx.path === '/api/mimo/tts')
+  ? mimoJsonParser(ctx, next) : normalJsonParser(ctx, next));
 app.use(router.routes());
 app.use(router.allowedMethods());
 app.use(async (ctx, next) => {
@@ -2616,9 +2621,17 @@ app.use(async (ctx) => {
 
 const HOST = process.env.HOST || '127.0.0.1';
 if (path.resolve(process.argv[1] || '') === path.resolve(new URL(import.meta.url).pathname)) {
-  app.listen(PORT, HOST, () => {
+  if (AUTH_DISABLED && !['127.0.0.1', '::1', 'localhost'].includes(HOST)) {
+    console.error('AUTH_DISABLED=1 时只允许监听 loopback');
+    process.exit(1);
+  }
+  const server = app.listen(PORT, HOST, () => {
     console.log(`Hermes model panel listening on ${HOST}:${PORT}`);
   });
+  server.headersTimeout = 15_000;
+  server.requestTimeout = 60_000;
+  server.keepAliveTimeout = 5_000;
+  server.maxRequestsPerSocket = 100;
 }
 
 export { app, loginRateRecord, loginAttempts, updateConfig, updatePanelMeta, upsertEnvValues };

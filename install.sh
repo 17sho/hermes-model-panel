@@ -11,10 +11,14 @@ HERMES_HOME="${HERMES_HOME:-${HOME}/.hermes}"
 HERMES_CONFIG="${HERMES_CONFIG:-${HERMES_HOME}/config.yaml}"
 PORT="${PORT:-3010}"
 HOST="${HOST:-127.0.0.1}"
-AUTH_DISABLED="${AUTH_DISABLED:-1}"
+AUTH_DISABLED="${AUTH_DISABLED:-0}"
 
 die() { echo "错误: $*" >&2; exit 1; }
 ok() { echo "✓ $*"; }
+
+if [[ "$AUTH_DISABLED" = "1" && "$HOST" != "127.0.0.1" && "$HOST" != "::1" && "$HOST" != "localhost" ]]; then
+  die "关闭认证时 HOST 必须是 loopback；拒绝创建匿名公网管理面。"
+fi
 
 echo "== Hermes 模型面板安装 =="
 

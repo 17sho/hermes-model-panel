@@ -16,6 +16,18 @@ PrivateTmp=true
 UMask=0077
 RestrictSUIDSGID=true
 LockPersonality=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectKernelLogs=true
+RestrictNamespaces=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+MemoryHigh=384M
+MemoryMax=512M
+TasksMax=256
+LimitNOFILE=8192
 
 [Install]
 WantedBy=multi-user.target

@@ -3,9 +3,15 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { ReadableStream } from "node:stream/web";
 
 import { atomicWriteFile, serializeFile } from "../src/lib/atomic-files.js";
 import { publicError, safeEqual } from "../src/lib/errors.js";
+import {
+  isPrivateAddress,
+  mapConcurrent,
+  readResponseText,
+} from "../src/lib/http-safety.js";
 import { createRequireAuth } from "../src/middleware/auth.js";
 import { securityHeadersAndOrigin } from "../src/middleware/csrf.js";
 
@@ -74,4 +80,54 @@ test("origin middleware rejects a cross-site mutation", async () => {
   await securityHeadersAndOrigin()(ctx, () => assert.fail("must not continue"));
   assert.equal(ctx.status, 403);
   assert.equal(headers.get("X-Frame-Options"), "DENY");
+});
+
+test("bounded upstream reads abort oversized streaming bodies", async () => {
+  const makeResponse = (text) => {
+    const bytes = Buffer.from(text);
+    return {
+      headers: new Map(),
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(bytes);
+          controller.close();
+        },
+      }),
+    };
+  };
+  await assert.rejects(
+    () => readResponseText(makeResponse("x".repeat(32)), 16),
+    /大小限制/,
+  );
+  assert.equal(await readResponseText(makeResponse("safe"), 16), "safe");
+});
+
+test("private address classification covers IPv4 and IPv6 ranges", () => {
+  for (const address of [
+    "127.0.0.1",
+    "10.1.2.3",
+    "169.254.169.254",
+    "192.168.1.1",
+    "::1",
+    "fd00::1",
+    "fe80::1",
+  ]) {
+    assert.equal(isPrivateAddress(address), true, address);
+  }
+  assert.equal(isPrivateAddress("8.8.8.8"), false);
+  assert.equal(isPrivateAddress("2606:4700:4700::1111"), false);
+});
+
+test("concurrency helper preserves order and enforces its limit", async () => {
+  let active = 0;
+  let maximum = 0;
+  const values = await mapConcurrent([0, 1, 2, 3, 4, 5], 2, async (value) => {
+    active += 1;
+    maximum = Math.max(maximum, active);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    active -= 1;
+    return value * 2;
+  });
+  assert.deepEqual(values, [0, 2, 4, 6, 8, 10]);
+  assert.equal(maximum, 2);
 });

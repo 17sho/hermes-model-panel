@@ -92,8 +92,23 @@ try {
     });
     assert.equal(badOrigin.status, 403, '跨站 Origin 必须拒绝');
 
+    const redirectAttack = await fetch(`${base}/auth/check`, {
+      redirect: 'manual',
+      headers: { 'x-forwarded-host': 'evil.example', 'x-forwarded-uri': 'https://evil.example/phish' },
+    });
+    assert.equal(redirectAttack.status, 302);
+    const redirectLocation = new URL(redirectAttack.headers.get('location'));
+    assert.equal(redirectLocation.hostname, 'hermes.23cm.me');
+    assert.equal(redirectLocation.searchParams.get('next'), 'https://hermes.23cm.me/', '站外 host/绝对 URL 不能进入 next');
+
     const unauthenticated = await fetch(`${base}/api/state`);
     assert.equal(unauthenticated.status, 401, '仅开启反代信任、没有可信标记时仍必须拒绝');
+    const unauthenticatedLargeBody = await fetch(`${base}/api/mimo/asr`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ audio: 'x'.repeat(2 * 1024 * 1024) }),
+    });
+    assert.equal(unauthenticatedLargeBody.status, 401, '未登录大请求必须在 body parser 之前拒绝');
     const proxyAuthenticated = await fetch(`${base}/api/state`, { headers: { 'x-hermes-authenticated': '1' } });
     assert.equal(proxyAuthenticated.status, 401, '固定值反代认证标记不得绕过登录');
     const login = await fetch(`${base}/api/login`, {
