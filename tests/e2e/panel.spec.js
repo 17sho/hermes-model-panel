@@ -62,7 +62,7 @@ test("侧栏版本入口可检查更新并展示回滚版本", async ({ page }) 
   await expect(page.locator("#confirmMessage")).toContainText("确定将面板更新到");
   await expect(page.locator("#versionLatestRow")).toBeVisible();
   await expect(page.locator("#versionRollbackList")).toContainText("v1.1.4");
-  await expect(page.locator("[data-rollback-id]")).toHaveText("回滚到此版本");
+  await expect(page.locator("[data-rollback-id]")).toHaveText("回滚");
   await page.locator('[data-static-click="68"]').click();
 });
 
