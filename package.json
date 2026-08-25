@@ -20,7 +20,7 @@
     "koa": "^2.15.4",
     "koa-bodyparser": "^4.4.1",
     "koa-static": "^5.0.0",
-    "undici": "^8.10.0",
+    "undici": "^6.28.0",
     "yaml": "^2.8.1"
   },
   "devDependencies": {
