@@ -22,7 +22,7 @@
           : "#f4f6f8";
       } catch {}
     </script>
-    <link rel="stylesheet" href="css/app.css?v=v1.3.2" />
+    <link rel="stylesheet" href="css/app.css?v=v1.3.3" />
   </head>
   <body>
     <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -30,7 +30,7 @@
         <header class="loginHead">
           <div class="loginMark" aria-hidden="true">◆</div>
           <div class="loginBrand">
-            <span>HERMES PANEL · v1.3.2</span>
+            <span>HERMES PANEL · v1.3.3</span>
             <h1 id="loginTitle">登录模型台</h1>
           </div>
         </header>
@@ -74,7 +74,7 @@
       ></div>
       <aside id="sideMenu" class="sideMenu" aria-label="功能菜单">
         <header class="sideBrand">
-          <b>Hermes 模型台</b>
+          <b>Hermes 管理中心</b>
           <div class="versionControl">
             <button
               id="versionBadgeBtn"
@@ -85,7 +85,7 @@
             >
               <span class="versionBadgeCopy">
                 <small>控制台版本</small>
-                <strong id="sidePanelVersion">v1.3.2</strong>
+                <strong id="sidePanelVersion">v1.3.3</strong>
                 <em id="versionBadgeState">检查中</em>
               </span>
               <span class="versionChevron" aria-hidden="true">⌄</span>
@@ -99,23 +99,21 @@
               <div class="versionCurrentRow">
                 <span>
                   <small>当前运行</small>
-                  <b id="versionPopoverNumber">v1.3.2</b>
+                  <b id="versionPopoverNumber">v1.3.3</b>
                   <code id="versionCurrentSha">--------</code>
                 </span>
                 <span id="versionStatusMark" class="versionStateChip"
                   >检查中</span
                 >
               </div>
+              <div id="versionLatestRow" class="versionLatestRow hidden">
+                <small>最新版本</small>
+                <b id="versionLatestNumber">v-</b>
+                <code id="versionLatestSha">--------</code>
+              </div>
               <p id="versionPopoverHint">正在检查版本…</p>
               <div class="versionActions">
-                <button id="versionRefreshBtn" type="button">↻ 检查更新</button>
-                <button
-                  id="versionUpdateBtn"
-                  class="primary hidden"
-                  type="button"
-                >
-                  立即更新
-                </button>
+                <button id="versionActionBtn" type="button">↻ 检查更新</button>
               </div>
               <div id="versionProgress" class="versionProgress hidden">
                 <i></i><span>准备中</span>
@@ -955,6 +953,6 @@
       </section>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="js/app.js?v=v1.3.2"></script>
+    <script type="module" src="js/app.js?v=v1.3.3"></script>
   </body>
 </html>

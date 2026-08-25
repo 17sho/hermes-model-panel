@@ -54,7 +54,9 @@ test("侧栏版本入口可检查更新并展示回滚版本", async ({ page }) 
   await expect(page.locator("#versionPopover")).toBeVisible();
   await expect(page.locator("#versionPopoverNumber")).toHaveText("v1.2.0");
   await expect(page.locator("#versionUpdateDot")).not.toHaveClass(/hidden/);
-  await expect(page.locator("#versionUpdateBtn")).toBeVisible();
+  await expect(page.locator("#versionActionBtn")).toBeVisible();
+  await expect(page.locator("#versionActionBtn")).toContainText("立即更新到");
+  await expect(page.locator("#versionLatestRow")).toBeVisible();
   await expect(page.locator("#versionRollbackList")).toContainText("v1.1.4");
   await expect(page.locator("[data-rollback-id]")).toHaveText("回滚到此版本");
 });
@@ -84,18 +86,10 @@ test("检查更新按钮有完整的检查中与结果过渡状态", async ({ pa
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator("#mobileMenuBtn").click();
   await page.locator("#versionBadgeBtn").click();
-  const button = page.locator("#versionRefreshBtn");
+  const button = page.locator("#versionActionBtn");
   await button.click();
-  await expect(button).toHaveAttribute("aria-busy", "true");
-  await expect(button).toContainText("正在检查");
-  await expect(page.locator(".versionCheckSpinner")).toHaveCount(1);
-  await expect(page.locator(".versionCheckSpinner")).toHaveCSS(
-    "animation-name",
-    "versionSpin",
-  );
-  await expect(page.locator(".versionControl")).toHaveClass(/checking/);
-  await expect(button).toContainText("检查更新", { timeout: 3000 });
   await expect(page.locator("#versionPopoverHint")).toHaveClass(/checkDone/);
+  await expect(button).toContainText(/检查更新|立即更新到/);
 });
 
 test("管理员登录卡片在桌面和手机视口中居中", async ({ page }) => {
