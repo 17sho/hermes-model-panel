@@ -22,7 +22,7 @@
           : "#f4f6f8";
       } catch {}
     </script>
-    <link rel="stylesheet" href="css/app.css?v=version-check-motion-4" />
+    <link rel="stylesheet" href="css/app.css?v=v1.3.1" />
   </head>
   <body>
     <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -30,7 +30,7 @@
         <header class="loginHead">
           <div class="loginMark" aria-hidden="true">◆</div>
           <div class="loginBrand">
-            <span>HERMES PANEL · v1.2.1</span>
+            <span>HERMES PANEL · v1.3.1</span>
             <h1 id="loginTitle">登录模型台</h1>
           </div>
         </header>
@@ -85,7 +85,7 @@
             >
               <span class="versionBadgeCopy">
                 <small>控制台版本</small>
-                <strong id="sidePanelVersion">v1.2.1</strong>
+                <strong id="sidePanelVersion">v1.3.1</strong>
                 <em id="versionBadgeState">检查中</em>
               </span>
               <span class="versionChevron" aria-hidden="true">⌄</span>
@@ -99,7 +99,7 @@
               <div class="versionCurrentRow">
                 <span>
                   <small>当前运行</small>
-                  <b id="versionPopoverNumber">v1.2.1</b>
+                  <b id="versionPopoverNumber">v1.3.1</b>
                   <code id="versionCurrentSha">--------</code>
                 </span>
                 <span id="versionStatusMark" class="versionStateChip"
@@ -262,6 +262,15 @@
                 <rect x="3" y="4" width="18" height="16" rx="2" />
                 <path d="m7 9 3 3-3 3M13 15h4" /></svg></span
             >快捷命令
+          </button>
+          <button
+            type="button"
+            data-target="approvalSettingsSection"
+            data-static-click="73"
+          >
+            <span class="navGlyph" aria-hidden="true"
+              ><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5c0 5 3.2 8.6 7.5 10 4.3-1.4 7.5-5 7.5-10V6Z"/><path d="m9 12 2 2 4-5"/></svg></span
+            >命令批准
           </button>
           <button
             type="button"
@@ -648,6 +657,16 @@
               </button>
             </div>
           </section>
+          <section id="approvalSettingsSection" class="panelSection">
+            <header class="settingsHero"><div><span class="sectionKicker">APPROVALS</span><h2>命令批准</h2><p class="muted">单独管理 Hermes 执行危险命令前是否请求你的同意。</p></div></header>
+            <div class="settingsGrid"><section class="settingsGroup settingsDanger">
+              <div class="settingsGroupHead"><span class="settingsIcon">!</span><div><h3>批准模式</h3><p class="muted">该设置作用于当前 Hermes 配置，重启 Gateway 后生效</p></div></div>
+              <div class="settingFields"><label>目标 Agent<select id="approvalAgent" data-static-change="75"></select></label><label>执行前批准<select id="approvalMode"><option value="manual">始终询问（安全，默认）</option><option value="smart">智能批准（仅高风险询问）</option><option value="off">无需同意（YOLO，高风险）</option></select></label></div>
+              <p id="approvalHint" class="settingsNote">正在读取当前设置。</p>
+              <div class="notice warn"><strong>安全提示</strong><p>选择“无需同意”后，Hermes 会直接执行被判定为危险的命令，不再向聊天发送批准请求。密钥脱敏等其他安全机制不会因此关闭。</p></div>
+              <div class="actions"><button id="saveApprovalBtn" class="danger" data-static-click="74">保存批准设置</button></div>
+            </section></div>
+          </section>
           <section id="settingsSection" class="panelSection">
             <header class="settingsHero">
               <div>
@@ -934,6 +953,6 @@
       </section>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="js/app.js?v=version-check-motion-4"></script>
+    <script type="module" src="js/app.js?v=v1.3.1"></script>
   </body>
 </html>

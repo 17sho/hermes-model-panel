@@ -28,6 +28,9 @@ const STATIC_EVENT_HANDLERS = {
   14: function(event){goSection('commandsSection',this)},
   15: function(event){goSection('settingsSection',this)},
   16: function(event){logout()},
+  73: function(event){goSection('approvalSettingsSection',this)},
+  74: function(event){saveApprovalSettings(this)},
+  75: function(event){loadApprovalSettings()},
   17: function(event){toggleSideMenu(true)},
   18: function(event){loadState()},
   19: function(event){createAgent()},
@@ -152,8 +155,8 @@ else if(MOBILE_MENU_MQ.addListener)MOBILE_MENU_MQ.addListener(syncMenuToViewport
 window.addEventListener('resize',syncMenuToViewport);
 function markSideActive(target){document.querySelectorAll('.sideNav button').forEach(b=>b.classList.toggle('active',b.dataset.target===target))}
 function showPanel(id){document.querySelectorAll('.panelSection').forEach(el=>el.classList.toggle('activeSection',el.id===id));markSideActive(id);try{history.replaceState(null,'','#'+id)}catch{} const scroller=MOBILE_MENU_MQ.matches?window:$('app');scroller?.scrollTo?.({top:0,behavior:'smooth'})}
-function goSection(id,btn){const el=$(id);if(!el)return;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='sessionResumeSection')loadSessionResume();if(id==='agentToolsSection')loadAgentTools();if(id==='agentSkillsSection')loadAgentSkills();if(id==='readableLogsSection')loadReadableLogs();if(id==='settingsSection')loadAuthSettings();if(window.matchMedia('(max-width:900px)').matches)toggleSideMenu(false)}
-function initPanelPage(){const wanted=(location.hash||'').replace('#','');const first=document.querySelector('.panelSection')?.id||'currentSection';const id=$(wanted)?wanted:first;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='sessionResumeSection')loadSessionResume();if(id==='agentToolsSection')loadAgentTools();if(id==='agentSkillsSection')loadAgentSkills();if(id==='readableLogsSection')loadReadableLogs();if(id==='settingsSection')loadAuthSettings()}
+function goSection(id,btn){const el=$(id);if(!el)return;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='sessionResumeSection')loadSessionResume();if(id==='agentToolsSection')loadAgentTools();if(id==='agentSkillsSection')loadAgentSkills();if(id==='readableLogsSection')loadReadableLogs();if(id==='approvalSettingsSection')loadApprovalSettings();if(id==='settingsSection')loadAuthSettings();if(window.matchMedia('(max-width:900px)').matches)toggleSideMenu(false)}
+function initPanelPage(){const wanted=(location.hash||'').replace('#','');const first=document.querySelector('.panelSection')?.id||'currentSection';const id=$(wanted)?wanted:first;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='sessionResumeSection')loadSessionResume();if(id==='agentToolsSection')loadAgentTools();if(id==='agentSkillsSection')loadAgentSkills();if(id==='readableLogsSection')loadReadableLogs();if(id==='approvalSettingsSection')loadApprovalSettings();if(id==='settingsSection')loadAuthSettings()}
 requestAnimationFrame(()=>document.body.classList.add('ready'));
 let TOAST_TIMER=null;
 function toast(msg){if(!msg||msg==='NEED_LOGIN'||/unauthorized/i.test(String(msg)))return;const t=$('toast');t.textContent=msg;t.classList.remove('leaving');t.classList.add('show');if(TOAST_TIMER)clearTimeout(TOAST_TIMER);TOAST_TIMER=setTimeout(()=>{t.classList.add('leaving');const done=()=>{t.classList.remove('show','leaving');TOAST_TIMER=null};if(window.matchMedia('(prefers-reduced-motion:reduce)').matches)done();else t.addEventListener('animationend',done,{once:true})},3200)}
@@ -250,6 +253,16 @@ async function saveAuthSettings(sourceButton){
     toast(enabled?'已打开密码保护':'已关闭密码保护');
   }catch(e){toast(e.message)}
   finally{if(btn){btn.dataset.busy=''; btn.disabled=false}}
+}
+async function loadApprovalSettings(){
+  const hint=$('approvalHint');
+  try{const agentSelect=$('approvalAgent');if(agentSelect&&!agentSelect.options.length){const agents=knownAgents();const states=await Promise.all(agents.map(async a=>{try{return await api(`/approval-settings?agent=${encodeURIComponent(a.id)}`)}catch{return {agent:a.id,mode:'manual'}}}));const saved=window.localStorage.getItem('hermes-approval-agent');agentSelect.innerHTML=agents.map(a=>{const state=states.find(x=>x.agent===a.id);const mode=state?.mode||'manual';const tag=mode==='off'?'无需同意':mode==='smart'?'智能批准':'始终询问';return `<option value="${escAttr(a.id)}">${esc(a.profile||a.id)} · ${tag}</option>`}).join('');const preferred=agents.some(a=>a.id===saved)?saved:(states.find(x=>x.mode!=='manual')?.agent||agents[0]?.id);if(preferred)agentSelect.value=preferred}const agent=agentSelect?.value||'default';window.localStorage.setItem('hermes-approval-agent',agent);const s=await api(`/approval-settings?agent=${encodeURIComponent(agent)}`);const select=$('approvalMode');if(select)select.value=s.mode||'manual';if(hint)hint.textContent=s.mode==='off'?'当前 Agent 不发送危险命令批准请求。':s.mode==='smart'?'当前 Agent：低风险自动批准，高风险命令仍会请求同意。':'当前 Agent 的危险命令会发送批准请求。'}catch(e){if(hint)hint.textContent=e.message}
+}
+async function saveApprovalSettings(sourceButton){
+  const mode=String($('approvalMode')?.value||'manual');
+  const agent=String($('approvalAgent')?.value||'default');
+  if(mode==='off'&&!await askConfirm('关闭命令批准后，Hermes 将不再询问便会执行被判定为危险的命令。确定继续？'))return;
+  try{const s=await api('/approval-settings',{method:'POST',body:JSON.stringify({agent,mode}),sourceButton});await loadApprovalSettings();toast(s.restart_required?'已保存当前 Agent；重启对应 Gateway 后生效':'已保存')}catch(e){toast(e.message)}
 }
 async function logout(){if(!await askConfirm('确定退出模型台？'))return;try{const result=await api('/logout',{method:'POST',body:'{}'});applyAuthSettings(result);if(result.logged_out){clearSensitiveClientState();showLogin();toast('已退出')}else{toast('密码保护未开启，无需退出登录')}}catch(e){toast(e.message)}}
 async function logoutAll(sourceButton){if(!await askConfirm('确定让全部设备的登录立即失效？'))return;try{const result=await api('/logout-all',{method:'POST',body:'{}',sourceButton});if(result.password_enabled){invalidateClientSession();return}store.csrfToken=String(result.csrf_token||'');toast('全部旧设备会话已退出，本机无需密码可继续使用')}catch(e){toast(e.message)}}

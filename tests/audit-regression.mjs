@@ -20,7 +20,7 @@ new vm.Script(script, { filename: 'public/index.html' });
 // JavaScript template strings are dynamic and must never be scanned as static.
 const shell = html;
 const shellIds = new Set([...shell.matchAll(/\bid=["']([^"']+)["']/g)].map((m) => m[1]));
-assert.equal([...html.matchAll(/class=["'][^"']*panelSection/g)].length, 13, '13 个页面保持不变');
+assert.equal([...html.matchAll(/class=["'][^"']*panelSection/g)].length, 14, '14 个页面（含独立命令批准页）保持不变');
 assert.doesNotMatch(html, /\son[a-z]+\s*=/i, '静态 HTML 不再包含内联事件');
 assert.match(html, /<script type="module" src="js\/app\.js(?:\?v=[A-Za-z0-9._-]+)?"><\/script>/, '前端脚本保持 ES module 入口');
 const legacyHtml = fs.readFileSync(path.join(root, 'public/index.html.pre-full-fix-20260823T145836Z'), 'utf8');

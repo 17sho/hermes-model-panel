@@ -1122,6 +1122,39 @@ router.post('/logout', async (ctx) => {
   ctx.body = { ...authPublicStatus(), logged_out: true };
 });
 
+router.get('/approval-settings', async (ctx) => {
+  try {
+    const agentId = String(ctx.query?.agent || 'default');
+    const agent = AGENTS().find((item) => item.id === agentId);
+    if (!agent) throw new Error('目标 Agent 不存在');
+    const { cfg } = await loadConfigDoc(agent.config);
+    const rawMode = cfg?.approvals?.mode;
+    const mode = rawMode === false || rawMode === 'off' ? 'off' : ['manual', 'smart'].includes(rawMode) ? rawMode : 'manual';
+    ctx.body = { ok: true, agent: agent.id, mode };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: publicError(e, '读取批准设置失败') };
+  }
+});
+
+router.post('/approval-settings', async (ctx) => {
+  try {
+    const agentId = String(ctx.request.body?.agent || 'default');
+    const agent = AGENTS().find((item) => item.id === agentId);
+    if (!agent) throw new Error('目标 Agent 不存在');
+    const mode = String(ctx.request.body?.mode || '');
+    if (!['manual', 'smart', 'off'].includes(mode)) throw new Error('批准模式无效');
+    await updateConfig((cfg) => {
+      cfg.approvals = cfg.approvals && typeof cfg.approvals === 'object' ? cfg.approvals : {};
+      cfg.approvals.mode = mode;
+    }, agent.config);
+    ctx.body = { ok: true, agent: agent.id, mode, restart_required: true };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: publicError(e, '保存批准设置失败') };
+  }
+});
+
 router.get('/auth-settings', async (ctx) => {
   ctx.body = sessionPublicStatus(ctx);
 });

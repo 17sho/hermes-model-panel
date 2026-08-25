@@ -5,11 +5,11 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#app")).toBeVisible();
 });
 
-test("13 页导航保留 SVG，移动菜单可重复开关", async ({ page }) => {
+test("14 页导航保留 SVG，移动菜单可重复开关", async ({ page }) => {
   const nav = page.locator(".sideNav button[data-target]");
-  await expect(nav).toHaveCount(13);
+  await expect(nav).toHaveCount(14);
   const svgCount = await page.locator(".sideNav svg").count();
-  for (let index = 0; index < 13; index += 1) {
+  for (let index = 0; index < 14; index += 1) {
     await nav.nth(index).click();
     const target = await nav.nth(index).getAttribute("data-target");
     await expect(page.locator(`#${target}`)).toHaveClass(/activeSection/);
