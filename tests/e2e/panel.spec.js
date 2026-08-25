@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }) => {
 test("14 页导航保留 SVG，移动菜单可重复开关", async ({ page }) => {
   const nav = page.locator(".sideNav button[data-target]");
   await expect(nav).toHaveCount(14);
+  await expect(page.locator('[data-target="currentSection"]')).toHaveClass(/active/);
   const svgCount = await page.locator(".sideNav svg").count();
   for (let index = 0; index < 14; index += 1) {
     await nav.nth(index).click();
