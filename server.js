@@ -101,6 +101,17 @@ async function fetchGithubPanelSha() {
   return sha;
 }
 
+async function fetchGithubPanelVersion() {
+  if (!validGithubRepo(PANEL_UPDATE_REPO) || !validGitRef(PANEL_UPDATE_BRANCH)) throw new Error('在线更新源配置无效');
+  const response = await fetch(`https://raw.githubusercontent.com/${PANEL_UPDATE_REPO}/${encodeURIComponent(PANEL_UPDATE_BRANCH)}/package.json`, {
+    headers: { accept: 'application/json', 'user-agent': 'hermes-model-panel-updater' },
+    signal: globalThis.AbortSignal.timeout(15000),
+  });
+  if (!response.ok) throw new Error(`GitHub 版本信息获取失败（HTTP ${response.status}）`);
+  const remotePackage = await response.json();
+  return String(remotePackage.version || '').trim() || null;
+}
+
 async function readPanelUpdateStatus() {
   try { return JSON.parse(await fs.readFile(PANEL_UPDATE_STATE, 'utf8')); } catch { return { state: 'idle', message: '尚未执行在线更新' }; }
 }
@@ -2499,14 +2510,15 @@ router.post('/gateway-control', async (ctx) => {
 
 router.get('/panel-update', async (ctx) => {
   try {
-    const [installed_sha, latest_sha, status, rollbacks] = await Promise.all([
-      readInstalledPanelSha(), fetchGithubPanelSha(), readPanelUpdateStatus(), listPanelRollbacks(),
+    const [installed_sha, latest_sha, latest_version, status, rollbacks] = await Promise.all([
+      readInstalledPanelSha(), fetchGithubPanelSha(), fetchGithubPanelVersion(), readPanelUpdateStatus(), listPanelRollbacks(),
     ]);
     ctx.body = {
       ok: true,
       repo: PANEL_UPDATE_REPO,
       branch: PANEL_UPDATE_BRANCH,
       version: packageInfo.version,
+      latest_version,
       installed_sha,
       latest_sha,
       update_available: !installed_sha || installed_sha !== latest_sha,

@@ -56,9 +56,13 @@ test("侧栏版本入口可检查更新并展示回滚版本", async ({ page }) 
   await expect(page.locator("#versionUpdateDot")).not.toHaveClass(/hidden/);
   await expect(page.locator("#versionActionBtn")).toBeVisible();
   await expect(page.locator("#versionActionBtn")).toContainText("立即更新到");
+  await page.locator("#versionActionBtn").click();
+  await expect(page.locator("#confirmModal")).toHaveClass(/show/);
+  await expect(page.locator("#confirmMessage")).toContainText("确定将面板更新到");
   await expect(page.locator("#versionLatestRow")).toBeVisible();
   await expect(page.locator("#versionRollbackList")).toContainText("v1.1.4");
   await expect(page.locator("[data-rollback-id]")).toHaveText("回滚到此版本");
+  await page.locator('[data-static-click="68"]').click();
 });
 
 test("移动端版本管理以内联折叠区展示且空回滚状态可见", async ({ page }) => {
