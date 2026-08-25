@@ -187,7 +187,7 @@ async function api(path,opts={}){
     const type=String(r.headers.get('content-type')||'').toLowerCase();
     if(!type.includes('application/json'))throw new Error('服务器返回了非 JSON 响应（HTTP '+r.status+'）');
     const j=await r.json();
-    if(r.status===401){invalidateClientSession();const e=new Error('NEED_LOGIN');e.code='NEED_LOGIN';throw e}
+    if(r.status===401){if(path!=='/login')invalidateClientSession();const e=new Error(path==='/login'?(j.error||'密码错误'):'NEED_LOGIN');e.code=path==='/login'?'LOGIN_FAILED':'NEED_LOGIN';throw e}
     if(!r.ok||j.ok===false)throw new Error(j.error||('HTTP '+r.status));
     return j;
   }catch(e){if(e?.name==='AbortError')throw new Error('请求超时');throw e;
@@ -203,15 +203,21 @@ function showApp(){ $('login').classList.add('hidden'); const app=$('app'); app.
 async function login(sourceButton){
   const pw=$('password');
   const password=pw?String(pw.value||''):'';
+  const feedback=$('loginFeedback');
+  if(feedback){feedback.className='loginFeedback';feedback.textContent='正在验证密码…'}
   try{
     const result=await api('/login',{method:'POST',body:JSON.stringify({password}),sourceButton});
     store.csrfToken=String(result.csrf_token||'');
+    if(feedback){feedback.className='loginFeedback success';feedback.textContent='登录成功，正在进入…'}
+    applyAuthSettings(result);
+    showApp();
     await loadState();
-  }catch(e){toast(e.message)}
+  }catch(e){if(feedback){feedback.className='loginFeedback error';feedback.textContent=e.message==='NEED_LOGIN'?'登录已失效，请重试':e.message}if(pw){pw.select();pw.focus()}}
 }
 function applyAuthSettings(s){
   if(s?.csrf_token)store.csrfToken=String(s.csrf_token);
   const on=!!(s&&s.password_enabled);
+  const logoutBtn=$('logoutBtn'); if(logoutBtn) logoutBtn.classList.toggle('hidden',!on);
   const box=$('authEnabled'); if(box) box.checked=on;
   const hint=$('authHint');
   if(hint) hint.textContent=on?(s.password_set?'密码保护已打开':'密码保护已打开，但还没设密码'):'密码保护已关闭，谁打开这个网址都能进';
@@ -734,7 +740,7 @@ async function controlGateway(agent,action){
     await loadWorkStatus();
   }catch(e){toast(e.message)}
 }
-async function loadState(){const seq=nextRequestSequence('state');try{const s=await api('/state');if(!isLatestRequest('state',seq))return;store.state=s;await serviceStatus();showApp();renderCurrent(s.current);renderImageGen();renderProviders(s.providers);renderCommands(s.commands);renderTestTargets(s.providers);renderRestartOptions();initPanelPage();loadAuthSettings()}catch(e){if(!isLatestRequest('state',seq))return;showLogin();toast(e.message)}}
+async function loadState(){const seq=nextRequestSequence('state');try{const s=await api('/state');if(!isLatestRequest('state',seq))return;store.state=s;showApp();renderCurrent(s.current);renderImageGen();renderProviders(s.providers);renderCommands(s.commands);renderTestTargets(s.providers);renderRestartOptions();initPanelPage();loadAuthSettings();serviceStatus()}catch(e){if(!isLatestRequest('state',seq))return;showLogin();toast(e.message)}}
 async function serviceStatus(){const seq=nextRequestSequence('serviceStatus');const box=$('serviceStatus'); if(!box)return; try{const s=await api('/service-status');if(!isLatestRequest('serviceStatus',seq))return; const list=s.statuses||[]; store.agentStatus={}; list.forEach(x=>{store.agentStatus[x.profile||x.agent]=x.status}); box.innerHTML=renderTopStatus(list,s.status); const def=list.find(x=>x.agent==='default'||x.profile==='agent1'); const down=!def||!def.ok; $('installGatewayBtn')?.classList.toggle('hidden',!down); $('restartGatewayBtn')?.classList.toggle('hidden',down); if($('gatewayActionHint')) $('gatewayActionHint').textContent=down?'Gateway 尚未运行。点击安装并启动，已填的模型与聊天平台配置会直接生效。':'重启会中断对应 agent 当前正在运行的任务；只在切换配置未生效或需要刷新聊天平台配置时使用。'; if(store.state) renderCurrent(store.state.current)}catch(e){if(!isLatestRequest('serviceStatus',seq))return;if(e?.code==='NEED_LOGIN'){showLogin();return}box.innerHTML=renderStatusChip('Gateway','unknown')}}
 async function addProvider(){try{const body={name:$('addName').value,base_url:$('addUrl').value,api_key:$('addKey').value,api_mode:$('addMode').value,model:$('addModel').value,models:$('addModels').value};const r=await api('/providers',{method:'POST',body:JSON.stringify(body)});store.state=r.state;renderCurrent(store.state.current);renderProviders(store.state.providers);renderCommands(store.state.commands);renderTestTargets(store.state.providers);toast('已添加中转站')}catch(e){toast(e.message)}}
 async function fetchModelsForAdd(sourceButton){
