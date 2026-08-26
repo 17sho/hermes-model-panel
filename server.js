@@ -2280,7 +2280,6 @@ async function upsertEnvValues(envPath, updates, validate = null) {
     next.push(`${key}=${value}`);
   }
   const out = next.join('\n').replace(/\n*$/, '\n');
-  const dir = path.dirname(envPath);
   await atomicWriteFile(envPath, out, 0o600);
   });
 }

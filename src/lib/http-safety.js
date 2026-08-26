@@ -1,6 +1,6 @@
 import net from "node:net";
 
-export async function readResponseBytes(response, maxBytes) {
+async function readResponseBytes(response, maxBytes) {
   const declared = Number(response.headers.get("content-length") || 0);
   if (declared > maxBytes) throw new Error("上游响应超过大小限制");
   if (!response.body) return Buffer.alloc(0);

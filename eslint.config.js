@@ -17,6 +17,7 @@ export default [
         FormData: "readonly",
         history: "readonly",
         location: "readonly",
+        localStorage: "readonly",
         process: "readonly",
         requestAnimationFrame: "readonly",
         setTimeout: "readonly",
