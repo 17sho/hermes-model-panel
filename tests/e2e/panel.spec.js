@@ -7,23 +7,23 @@ test.beforeEach(async ({ page }) => {
 
 test("可删除名称含斜杠的 Hugging Face 模型", async ({ page }) => {
   await page.locator('[data-target="providersSection"]').click();
-  const model = page.locator('.modelItem', {
-    hasText: 'deepseek-ai/DeepSeek-V3',
+  const model = page.locator(".modelItem", {
+    hasText: "deepseek-ai/DeepSeek-V3",
   });
   await expect(model).toBeVisible();
   const requestPromise = page.waitForRequest(
     (request) =>
-      request.method() === 'DELETE' &&
-      request.url().endsWith(
-        '/api/providers/1/models/deepseek-ai%2FDeepSeek-V3',
-      ),
+      request.method() === "DELETE" &&
+      request
+        .url()
+        .endsWith("/api/providers/1/models/deepseek-ai%2FDeepSeek-V3"),
   );
   await model.locator('[data-action="delete-model"]').click();
   await page.locator('[data-static-click="69"]').click();
   const request = await requestPromise;
-  expect(request.url()).toContain('deepseek-ai%2FDeepSeek-V3');
+  expect(request.url()).toContain("deepseek-ai%2FDeepSeek-V3");
   await expect(model).toHaveCount(0);
-  await expect(page.locator('#toast')).toContainText('已删除模型');
+  await expect(page.locator("#toast")).toContainText("已删除模型");
 });
 
 test("完整编辑中转站且 API Key 默认隐藏、可切换显示", async ({ page }) => {
@@ -83,8 +83,10 @@ test("手机端编辑中转站关闭时不等待禁用的动画", async ({ page 
   const modal = page.locator("#providerEditModal");
   await expect(modal).toBeVisible();
   const hiddenSynchronously = await page.evaluate(() => {
-    document.querySelector('#providerEditModal .modalHead > button').click();
-    return document.querySelector('#providerEditModal').classList.contains('hidden');
+    document.querySelector("#providerEditModal .modalHead > button").click();
+    return document
+      .querySelector("#providerEditModal")
+      .classList.contains("hidden");
   });
   expect(hiddenSynchronously).toBe(true);
 });
@@ -284,13 +286,15 @@ test("弹窗退出不会被子元素动画提前结束", async ({ page }) => {
   const modal = page.locator("#commandsModal");
   await expect(modal).toBeVisible();
   const ignoredChildAnimation = await modal.evaluate((element) => {
-    document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    const event = new window.AnimationEvent('animationend', {
-      animationName: 'spin',
+    document.dispatchEvent(
+      new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    const event = new window.AnimationEvent("animationend", {
+      animationName: "spin",
       bubbles: true,
     });
-    element.querySelector('.modalHead').dispatchEvent(event);
-    return !element.classList.contains('hidden');
+    element.querySelector(".modalHead").dispatchEvent(event);
+    return !element.classList.contains("hidden");
   });
   expect(ignoredChildAnimation).toBe(true);
   await expect(modal).toHaveClass(/hidden/, { timeout: 600 });
@@ -362,6 +366,36 @@ for (const width of [320, 390, 900, 1024, 1100]) {
         document.documentElement.clientWidth,
     );
     expect(overflow).toBeLessThanOrEqual(1);
+  });
+}
+
+for (const width of [320, 390]) {
+  test(`${width}px 长模型错误不会撑宽模型卡片`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const geometry = await page.evaluate(() => {
+      const panel = document.querySelector(".panelSection.activeSection");
+      if (!panel) throw new Error("active panel missing");
+      const list = document.createElement("div");
+      list.className = "modelList";
+      list.innerHTML = `<div class="modelItem"><div class="modelName">vertex_ai/gemini-robotics-er-1.5-preview</div><div class="sub">当前模型测试</div><div class="modelBtns"><button class="testBtn">测试</button><button>切 agent1</button></div><div class="modelResult">{"error":{"message":"Received Model Group=vertex_ai/gemini-robotics-er-1.5-preview Available Model Group Fallbacks=None","status":"NOT_FOUND"}}</div></div>`;
+      panel.appendChild(list);
+      const nodes = [list, ...list.querySelectorAll("*")];
+      return {
+        documentOverflow:
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+        escaped: nodes.filter((element) => {
+          const rect = element.getBoundingClientRect();
+          return rect.left < -1 || rect.right > window.innerWidth + 1;
+        }).length,
+        cardWidth: list.querySelector(".modelItem").getBoundingClientRect()
+          .width,
+        listWidth: list.getBoundingClientRect().width,
+      };
+    });
+    expect(geometry.documentOverflow).toBeLessThanOrEqual(1);
+    expect(geometry.escaped).toBe(0);
+    expect(geometry.cardWidth).toBeLessThanOrEqual(geometry.listWidth + 1);
   });
 }
 
