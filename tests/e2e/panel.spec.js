@@ -272,6 +272,30 @@ test("弹窗保持焦点陷阱并恢复触发按钮焦点", async ({ page }) => 
   await expect(open).toBeFocused();
 });
 
+test("Escape 通用关闭当前打开的新旧弹窗", async ({ page }) => {
+  await page.locator('[data-target="providersSection"]').click();
+  const edit = page.locator('[data-action="edit-provider"]').first();
+  await edit.click();
+  const providerModal = page.locator("#providerEditModal");
+  await expect(providerModal).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(providerModal).toBeHidden();
+  await expect(edit).toBeFocused();
+
+  const openedRestart = await page.evaluate(() => {
+    const modal = document.querySelector("#restartModal");
+    if (!modal) return false;
+    window.openModal("restartModal");
+    return true;
+  });
+  if (openedRestart) {
+    const restartModal = page.locator("#restartModal");
+    await expect(restartModal).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(restartModal).toBeHidden();
+  }
+});
+
 for (const width of [320, 390, 900, 1024, 1100]) {
   test(`${width}px 无页面横向溢出`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
