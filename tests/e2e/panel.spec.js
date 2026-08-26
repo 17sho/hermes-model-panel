@@ -39,12 +39,44 @@ test("批量测试进行中仍可查看检测日志", async ({ page }) => {
   await page.locator("#testTarget").selectOption("provider-all:1");
   await page.locator("#runTestBtn").click();
   const logButton = page.locator("#testLogToggleBtn");
-  await expect(page.locator("#runTestBtn")).toBeDisabled();
+  await expect(page.locator("#runTestBtn")).toBeEnabled();
+  await expect(page.locator("#runTestBtn")).toHaveText("暂停测试");
   await expect(logButton).toBeEnabled();
   await logButton.click();
   await expect(page.locator("#testLog")).toBeVisible();
   await expect(logButton).toHaveText("隐藏检测日志");
   releaseFirst();
+});
+
+test("批量测试可以暂停并继续", async ({ page }) => {
+  let requestCount = 0;
+  let releaseFirst;
+  await page.route("**/api/test", async (route) => {
+    requestCount += 1;
+    if (requestCount === 1) {
+      await new Promise((resolve) => {
+        releaseFirst = resolve;
+      });
+    }
+    await route.continue();
+  });
+  await page.locator('[data-target="testSection"]').click();
+  await page.locator("#testTarget").selectOption("provider-all:1");
+  const runButton = page.locator("#runTestBtn");
+  await runButton.click();
+  await expect(runButton).toHaveText("暂停测试");
+  await runButton.click();
+  await expect(runButton).toHaveText("继续测试");
+  releaseFirst();
+  await page.waitForTimeout(300);
+  expect(requestCount).toBe(1);
+  await expect(page.locator("#testProgressText")).toContainText("进行中");
+  await runButton.click();
+  await expect.poll(() => requestCount).toBeGreaterThan(1);
+  await expect(page.locator("#testProgressText")).toHaveText("已完成", {
+    timeout: 20_000,
+  });
+  await expect(runButton).toHaveText("开始测试");
 });
 
 test("手机端测试结果卡片不会被长元信息撑出视口", async ({ page }) => {

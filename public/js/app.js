@@ -832,6 +832,7 @@ async function switchModel(id,m,agent='default'){
 }
 async function rebuildCommands(){try{const r=await api('/rebuild-commands',{method:'POST'});store.state=r.state;renderCommands(store.state.commands);toast('快捷命令已重建')}catch(e){toast(e.message)}}
 async function runTest(sourceButton){
+  if(toggleBatchTestPause())return;
   const target=$('testTarget').value;
   if(target.startsWith('provider-all:')){await testProviderAllModels(Number(target.split(':')[1]), true);return;}
   const body={message:$('testMessage').value,test_mode:$('testMode')?.value||'basic'};
@@ -882,7 +883,12 @@ async function testAgentCurrent(agent){
   }
 }
 let BATCH_TEST_ACTIVE=false;
-function setBatchTestLock(locked){BATCH_TEST_ACTIVE=locked;document.querySelectorAll('#testSection button:not(#testLogToggleBtn),.provider button[data-action^="test-"]').forEach(b=>{b.disabled=locked;b.dataset.batchLocked=locked?'1':''})}
+let BATCH_TEST_PAUSED=false;
+let BATCH_TEST_RESUME=null;
+function syncBatchTestButton(){const b=$('runTestBtn');if(!b)return;b.disabled=false;b.dataset.batchLocked='';b.textContent=BATCH_TEST_ACTIVE?(BATCH_TEST_PAUSED?'继续测试':'暂停测试'):'开始测试';b.classList.toggle('danger',BATCH_TEST_ACTIVE&&!BATCH_TEST_PAUSED);b.classList.toggle('primary',!BATCH_TEST_ACTIVE||BATCH_TEST_PAUSED)}
+function toggleBatchTestPause(){if(!BATCH_TEST_ACTIVE)return false;BATCH_TEST_PAUSED=!BATCH_TEST_PAUSED;syncBatchTestButton();if(BATCH_TEST_PAUSED){appendTestLog('批量检测已暂停，将在当前请求结束后停止继续检测','warn');toast('测试已暂停')}else{const resume=BATCH_TEST_RESUME;BATCH_TEST_RESUME=null;if(resume)resume();appendTestLog('继续批量检测','run');toast('继续测试')}return true}
+function waitWhileBatchPaused(){if(!BATCH_TEST_PAUSED)return Promise.resolve();return new Promise(resolve=>{BATCH_TEST_RESUME=resolve})}
+function setBatchTestLock(locked){BATCH_TEST_ACTIVE=locked;if(!locked){BATCH_TEST_PAUSED=false;const resume=BATCH_TEST_RESUME;BATCH_TEST_RESUME=null;if(resume)resume()}document.querySelectorAll('#testSection button:not(#testLogToggleBtn):not(#runTestBtn),.provider button[data-action^="test-"]').forEach(b=>{b.disabled=locked;b.dataset.batchLocked=locked?'1':''});syncBatchTestButton()}
 async function testProviderAllModels(providerIndex, fromTop=false){
   if(BATCH_TEST_ACTIVE){toast('批量测试正在进行');return}
   const p=(store.state.providers||[]).find(x=>Number(x.id)===Number(providerIndex));
@@ -899,6 +905,7 @@ async function testProviderAllModels(providerIndex, fromTop=false){
   let ok=0, bad=0;
   updateTestOverview({done:0,total:models.length,label:`进行中 0 / ${models.length}`});
   for(let i=0;i<models.length;i++){
+    await waitWhileBatchPaused();
     const m=models[i];
     const box=$(resultId(providerIndex,m));
     appendTestLog('['+(i+1)+'/'+models.length+'] 正在检测 '+m,'run');
