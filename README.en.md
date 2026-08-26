@@ -1,6 +1,6 @@
 # Hermes Model Panel
 
-[![Version](https://img.shields.io/badge/version-v1.3.27-6f8cff)](https://github.com/17sho/hermes-model-panel/releases)
+[![Version](https://img.shields.io/badge/version-v1.3.28-6f8cff)](https://github.com/17sho/hermes-model-panel/releases)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520-339933?logo=nodedotjs&logoColor=white)](package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Hermes Agent](https://img.shields.io/badge/for-Hermes%20Agent-111827)](https://github.com/NousResearch/hermes-agent)

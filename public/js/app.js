@@ -173,6 +173,7 @@ function appendTestLog(msg,type='run'){const box=$('testLogBody'); if(!box)retur
 function summarizeResult(r){if(!r)return '没有返回结果'; const status=(r.ok?'可用':'不可用/空回复')+' · HTTP '+(r.http_status??'-')+' · '+(r.latency_ms??'-')+'ms'; return (r.providerIndex||'-')+'号 '+(r.provider_name||'-')+' / '+(r.model||'-')+'：'+status+(r.ok?'':' · '+(r.error||'测试失败'))}
 function resultLogType(r){return r&&r.ok?'ok':'bad'}
 const REQUEST_LOCKS=new Set();
+const SHARED_GET_REQUESTS=new Map();
 const REQUEST_SEQUENCE=Object.create(null);
 const INFLIGHT_CONTROLLERS=new Set();
 function nextRequestSequence(name){return REQUEST_SEQUENCE[name]=(REQUEST_SEQUENCE[name]||0)+1}
@@ -186,6 +187,13 @@ async function api(path,opts={}){
   const method=String(opts.method||'GET').toUpperCase();
   const isLong=method!=='GET'||/^\/(state|usage|service-status|chat-platforms|toolsets|skills|service-scopes|gateway-logs|sessions)/.test(path);
   const key=method+' '+path+' '+String(opts.body||'');
+  if(method==='GET'&&SHARED_GET_REQUESTS.has(key))return SHARED_GET_REQUESTS.get(key);
+  const request=runApiRequest(path,opts,method,isLong,key);
+  if(method!=='GET')return request;
+  SHARED_GET_REQUESTS.set(key,request);
+  try{return await request}finally{if(SHARED_GET_REQUESTS.get(key)===request)SHARED_GET_REQUESTS.delete(key)}
+}
+async function runApiRequest(path,opts,method,isLong,key){
   if(isLong&&REQUEST_LOCKS.has(key))throw new Error('操作正在处理中');
   const btn=isLong?(opts.sourceButton||null):null;
   const ownsButton=btn?busyStart(btn):false;

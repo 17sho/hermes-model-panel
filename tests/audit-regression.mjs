@@ -22,6 +22,8 @@ assert.match(script, /s\.message_count\?`\$\{s\.message_count\} 条消息`/, '�
 assert.match(script, /\$\{s\.current\?'':`<button class="small"/, '当前会话不再显示无效的切回按钮');
 assert.doesNotMatch(styles, /\.workSessActs select,\.workSessActs button\{min-height:34px;height:34px\}/, '会话操作控件不以固定 34px 高度挤压文字');
 assert.match(styles, /\.workSessActs select,\.workSessActs button\{min-height:var\(--control-sm\);height:auto\}/, '会话操作控件允许内容撑开高度');
+assert.match(script, /const SHARED_GET_REQUESTS=new Map\(\)/, '相同 GET 请求使用共享的在途 Promise');
+assert.match(script, /if\(method==='GET'&&SHARED_GET_REQUESTS\.has\(key\)\)return SHARED_GET_REQUESTS\.get\(key\)/, '重复 GET 请求复用已有结果而不是撞互斥锁');
 new vm.Script(script, { filename: 'public/index.html' });
 
 // Only the trusted HTML shell contributes to the legacy DOM contract. IDs in
