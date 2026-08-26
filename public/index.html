@@ -22,7 +22,7 @@
           : "#f4f6f8";
       } catch {}
     </script>
-    <link rel="stylesheet" href="css/app.css?v=v1.3.13" />
+    <link rel="stylesheet" href="css/app.css?v=v1.3.14" />
   </head>
   <body>
     <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -30,7 +30,7 @@
         <header class="loginHead">
           <div class="loginMark" aria-hidden="true">◆</div>
           <div class="loginBrand">
-            <span>HERMES PANEL · v1.3.13</span>
+            <span>HERMES PANEL · v1.3.14</span>
             <h1 id="loginTitle">登录模型台</h1>
           </div>
         </header>
@@ -85,7 +85,7 @@
             >
               <span class="versionBadgeCopy">
                 <small>控制台版本</small>
-                <strong id="sidePanelVersion">v1.3.13</strong>
+                <strong id="sidePanelVersion">v1.3.14</strong>
                 <em id="versionBadgeState">检查中</em>
               </span>
               <span class="versionChevron" aria-hidden="true">⌄</span>
@@ -99,7 +99,7 @@
               <div class="versionCurrentRow">
                 <span>
                   <small>当前运行</small>
-                  <b id="versionPopoverNumber">v1.3.13</b>
+                  <b id="versionPopoverNumber">v1.3.14</b>
                   <code id="versionCurrentSha">--------</code>
                 </span>
                 <span id="versionStatusMark" class="versionStateChip"
@@ -467,10 +467,17 @@
                   一键获取模型
                 </button>
               </div>
-              <label class="providerPrivateSwitch">
-                <input id="addAllowPrivate" type="checkbox" />
-                <span><b>允许访问内网</b><small>仅此中转可访问 10.x、172.16–31.x、192.168.x、CGNAT 和 IPv6 ULA；云元数据等危险地址仍会阻止。</small></span>
-              </label>
+              <details class="providerAdvanced">
+                <summary>高级设置</summary>
+                <div class="providerAdvancedBody">
+                  <label for="addNetworkScope">网络访问范围</label>
+                  <select id="addNetworkScope">
+                    <option value="public">仅公网和本机（推荐）</option>
+                    <option value="private">允许访问普通内网</option>
+                  </select>
+                  <small>仅内网、VPC、Docker 或组网中的模型服务需要开启；云元数据等危险地址始终禁止。</small>
+                </div>
+              </details>
               <textarea
                 id="addModels"
                 placeholder="其它模型，每行一个，可选"
@@ -948,6 +955,10 @@
           <div><span class="confirmKicker">请确认</span><h2 id="confirmTitle">确认操作</h2></div>
         </div>
         <p id="confirmMessage" class="muted"></p>
+        <label id="confirmChoiceWrap" class="confirmChoice hidden">
+          <span id="confirmChoiceLabel"></span>
+          <select id="confirmChoice"></select>
+        </label>
         <div class="confirmActions">
           <button data-static-click="68">取消</button
           ><button id="confirmOkBtn" class="primary" data-static-click="69">
@@ -957,6 +968,6 @@
       </section>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="js/app.js?v=v1.3.13"></script>
+    <script type="module" src="js/app.js?v=v1.3.14"></script>
   </body>
 </html>
