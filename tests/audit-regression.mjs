@@ -20,6 +20,8 @@ assert.match(script, /sessionModelSelect is-placeholder/, '会话模型选择框
 assert.match(styles, /\.sessionModelSelect\.is-placeholder\{color:var\(--muted\)\}/, '会话模型占位文字使用次要颜色');
 assert.match(script, /s\.message_count\?`\$\{s\.message_count\} 条消息`/, '消息数量和单位作为不可拆分的元数据项渲染');
 assert.match(script, /\$\{s\.current\?'':`<button class="small"/, '当前会话不再显示无效的切回按钮');
+assert.doesNotMatch(styles, /\.workSessActs select,\.workSessActs button\{min-height:34px;height:34px\}/, '会话操作控件不以固定 34px 高度挤压文字');
+assert.match(styles, /\.workSessActs select,\.workSessActs button\{min-height:var\(--control-sm\);height:auto\}/, '会话操作控件允许内容撑开高度');
 new vm.Script(script, { filename: 'public/index.html' });
 
 // Only the trusted HTML shell contributes to the legacy DOM contract. IDs in

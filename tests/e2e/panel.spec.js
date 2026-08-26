@@ -283,8 +283,8 @@ test("弹窗退出不会被子元素动画提前结束", async ({ page }) => {
   await page.locator("#commandsSection button").click();
   const modal = page.locator("#commandsModal");
   await expect(modal).toBeVisible();
-  await page.keyboard.press("Escape");
   const ignoredChildAnimation = await modal.evaluate((element) => {
+    document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     const event = new window.AnimationEvent('animationend', {
       animationName: 'spin',
       bubbles: true,
