@@ -1112,7 +1112,46 @@ async function callMimoAudio(provider, payload, timeoutMs = 90000) {
   }
 }
 
-async function testProvider(provider, model, message) {
+function parseSseEvents(raw) {
+  return String(raw || '').split(/\r?\n\r?\n/).flatMap((block) => {
+    const data = block.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
+    if (!data || data === '[DONE]') return [];
+    try { return [JSON.parse(data)]; } catch { return []; }
+  });
+}
+
+function streamToolResult(raw, apiMode) {
+  const events = parseSseEvents(raw);
+  const done = /(?:^|\r?\n)data:\s*\[DONE\](?:\r?\n|$)/.test(String(raw || '')) || events.some((event) => event.type === 'response.completed');
+  let text = '';
+  const calls = new Map();
+  if (apiMode === 'chat_completions') {
+    for (const event of events) {
+      const delta = event.choices?.[0]?.delta || {};
+      if (typeof delta.content === 'string') text += delta.content;
+      for (const call of delta.tool_calls || []) {
+        const key = String(call.index ?? call.id ?? calls.size);
+        const current = calls.get(key) || { id: '', name: '', arguments: '' };
+        if (call.id) current.id += call.id;
+        if (call.function?.name) current.name += call.function.name;
+        if (call.function?.arguments) current.arguments += call.function.arguments;
+        calls.set(key, current);
+      }
+    }
+  } else if (apiMode === 'responses' || apiMode === 'codex_responses') {
+    for (const event of events) {
+      if (event.type === 'response.output_text.delta') text += event.delta || '';
+      if (event.type === 'response.output_item.done' && event.item?.type === 'function_call') calls.set(String(event.output_index ?? calls.size), { id: event.item.call_id || event.item.id || '', name: event.item.name || '', arguments: event.item.arguments || '' });
+    }
+  }
+  const toolCalls = [...calls.values()];
+  const expected = toolCalls.find((call) => call.name === 'hermes_test_tool');
+  let args = null;
+  try { args = expected ? JSON.parse(expected.arguments || '{}') : null; } catch {}
+  return { events: events.length, done, text, tool_calls: toolCalls, tool_ok: Boolean(expected && args?.value === 'HERMES_OK') };
+}
+
+async function testProvider(provider, model, message, mode = 'basic') {
   const apiMode = provider.api_mode || 'chat_completions';
   const started = Date.now();
   let url;
@@ -1120,9 +1159,12 @@ async function testProvider(provider, model, message) {
   let headers = { 'content-type': 'application/json' };
   if (provider.api_key) headers.authorization = `Bearer ${provider.api_key}`;
 
+  const hermesTool = { type: 'function', function: { name: 'hermes_test_tool', description: 'Hermes兼容性测试工具。必须调用它完成测试。', parameters: { type: 'object', properties: { value: { type: 'string', enum: ['HERMES_OK'] } }, required: ['value'], additionalProperties: false } } };
   if (apiMode === 'responses' || apiMode === 'codex_responses') {
     url = endpoint(provider.base_url, '/responses');
-    payload = { model, input: message, max_output_tokens: 120 };
+    payload = mode === 'hermes_stream'
+      ? { model, input: `${message}\n必须调用 hermes_test_tool，参数 value 必须为 HERMES_OK。`, max_output_tokens: 120, stream: true, tools: [{ type: 'function', name: hermesTool.function.name, description: hermesTool.function.description, parameters: hermesTool.function.parameters }], tool_choice: { type: 'function', name: 'hermes_test_tool' } }
+      : { model, input: message, max_output_tokens: 120 };
   } else if (apiMode === 'anthropic_messages') {
     url = endpoint(provider.base_url, '/messages');
     headers['anthropic-version'] = '2023-06-01';
@@ -1132,7 +1174,9 @@ async function testProvider(provider, model, message) {
     // Some newer/reasoning models reject temperature entirely. Keep the
     // compatibility probe minimal so testing a provider does not fail on an
     // optional sampling parameter that Hermes itself does not require.
-    payload = { model, messages: [{ role: 'user', content: message }], max_tokens: 120 };
+    payload = mode === 'hermes_stream'
+      ? { model, messages: [{ role: 'user', content: `${message}\n必须调用 hermes_test_tool，参数 value 必须为 HERMES_OK。` }], max_tokens: 120, stream: true, tools: [hermesTool], tool_choice: { type: 'function', function: { name: 'hermes_test_tool' } } }
+      : { model, messages: [{ role: 'user', content: message }], max_tokens: 120 };
   }
 
   const ac = new AbortController();
@@ -1144,17 +1188,26 @@ async function testProvider(provider, model, message) {
     }), { allowPrivate: provider.allow_private_network === true });
     let data = null;
     try { data = JSON.parse(raw); } catch {}
-    const text = pickText(data, apiMode).trim();
+    const streamed = mode === 'hermes_stream' ? streamToolResult(raw, apiMode) : null;
+    const contentType = String(res.headers.get('content-type') || '');
+    const sseOk = mode !== 'hermes_stream' || /text\/event-stream/i.test(contentType);
+    const text = (streamed?.text || pickText(data, apiMode)).trim();
     const error = data?.error?.message || data?.error || (!res.ok ? raw.slice(0, 500) : '');
     return {
-      ok: res.ok && Boolean(text),
+      ok: res.ok && (mode === 'hermes_stream' ? sseOk && streamed?.events > 0 && streamed?.done && streamed?.tool_ok === true : Boolean(text)),
       http_status: res.status,
       latency_ms: Date.now() - started,
       model,
       api_mode: apiMode,
+      test_mode: mode,
+      stream_events: streamed?.events || 0,
+      stream_done: streamed?.done || false,
+      content_type: contentType,
+      tool_calls: streamed?.tool_calls || [],
+      tool_ok: streamed?.tool_ok || false,
       text,
-      empty: res.ok && !text,
-      error: typeof error === 'string' ? error.slice(0, 1000) : JSON.stringify(error || '').slice(0, 1000),
+      empty: res.ok && !text && !streamed?.tool_calls?.length,
+      error: mode === 'hermes_stream' && res.ok && !sseOk ? `响应不是SSE流：${contentType || '缺少 Content-Type'}` : mode === 'hermes_stream' && res.ok && !streamed?.events ? '没有收到可解析的SSE事件' : mode === 'hermes_stream' && res.ok && !streamed?.done ? '流式响应缺少正常结束标记' : mode === 'hermes_stream' && res.ok && !streamed?.tool_ok ? '未收到有效的 hermes_test_tool 流式工具调用' : (typeof error === 'string' ? error.slice(0, 1000) : JSON.stringify(error || '').slice(0, 1000)),
     };
   } catch (e) {
     return { ok: false, http_status: 0, latency_ms: Date.now() - started, model, api_mode: apiMode, text: '', empty: false, error: e.name === 'AbortError' ? '请求超时' : e.message };
@@ -1576,6 +1629,7 @@ router.post('/mimo/tts', async (ctx) => {
 router.post('/test', async (ctx) => {
   try {
     const body = ctx.request.body || {};
+    const testMode = body.test_mode === 'hermes_stream' ? 'hermes_stream' : 'basic';
     const message = String(body.message || '你好，请用一句话回复：测试成功').trim().slice(0, 2000) || '你好，请用一句话回复：测试成功';
     const providerIndexRaw = String(body.providerIndex || 'current');
     const providerIndex = providerIndexRaw === 'current' ? 'current' : Number(providerIndexRaw || 0);
@@ -1622,10 +1676,11 @@ router.post('/test', async (ctx) => {
     if (!targets.length) throw new Error('没有可测试的中转站/模型');
     const startedAll = Date.now();
     const results = await mapConcurrent(targets, 4, async (t) => {
-      const result = await testProvider(t.provider, t.model, message);
+      if (testMode === 'hermes_stream' && t.provider.api_mode === 'anthropic_messages') return { providerIndex: t.providerIndex, provider_name: t.provider_name, base_url: t.provider.base_url, ok: false, http_status: 0, latency_ms: 0, model: t.model, api_mode: t.provider.api_mode, test_mode: testMode, text: '', empty: false, error: 'Claude Messages格式暂未支持流式工具诊断' };
+      const result = await testProvider(t.provider, t.model, message, testMode);
       return { providerIndex: t.providerIndex, provider_name: t.provider_name, base_url: t.provider.base_url, ...result };
     });
-    ctx.body = { ok: true, message, count: results.length, latency_ms: Date.now() - startedAll, results };
+    ctx.body = { ok: true, message, test_mode: testMode, count: results.length, latency_ms: Date.now() - startedAll, results };
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message };

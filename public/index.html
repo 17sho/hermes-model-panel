@@ -22,7 +22,7 @@
           : "#f4f6f8";
       } catch {}
     </script>
-    <link rel="stylesheet" href="css/app.css?v=v1.3.14" />
+    <link rel="stylesheet" href="css/app.css?v=v1.3.15" />
   </head>
   <body>
     <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -30,7 +30,7 @@
         <header class="loginHead">
           <div class="loginMark" aria-hidden="true">◆</div>
           <div class="loginBrand">
-            <span>HERMES PANEL · v1.3.14</span>
+            <span>HERMES PANEL · v1.3.15</span>
             <h1 id="loginTitle">登录模型台</h1>
           </div>
         </header>
@@ -85,7 +85,7 @@
             >
               <span class="versionBadgeCopy">
                 <small>控制台版本</small>
-                <strong id="sidePanelVersion">v1.3.14</strong>
+                <strong id="sidePanelVersion">v1.3.15</strong>
                 <em id="versionBadgeState">检查中</em>
               </span>
               <span class="versionChevron" aria-hidden="true">⌄</span>
@@ -99,7 +99,7 @@
               <div class="versionCurrentRow">
                 <span>
                   <small>当前运行</small>
-                  <b id="versionPopoverNumber">v1.3.14</b>
+                  <b id="versionPopoverNumber">v1.3.15</b>
                   <code id="versionCurrentSha">--------</code>
                 </span>
                 <span id="versionStatusMark" class="versionStateChip"
@@ -545,6 +545,13 @@
                   <option value="current">当前使用</option>
                   <option value="all">测试全部</option>
                 </select></label
+              ><label
+                ><span class="k">测试方式</span
+                ><select id="testMode">
+                  <option value="basic">普通回复测试</option>
+                  <option value="hermes_stream">Hermes 流式工具调用</option>
+                </select>
+                <small class="fieldHint">流式模式会强制模型调用测试工具，用于发现普通请求正常但 Hermes 无法工作的情况。</small></label
               ><button id="runTestBtn" class="primary" data-static-click="35">
                 开始测试
               </button>
@@ -968,6 +975,6 @@
       </section>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="js/app.js?v=v1.3.14"></script>
+    <script type="module" src="js/app.js?v=v1.3.15"></script>
   </body>
 </html>

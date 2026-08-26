@@ -819,14 +819,14 @@ async function rebuildCommands(){try{const r=await api('/rebuild-commands',{meth
 async function runTest(sourceButton){
   const target=$('testTarget').value;
   if(target.startsWith('provider-all:')){await testProviderAllModels(Number(target.split(':')[1]), true);return;}
-  const body={message:$('testMessage').value};
+  const body={message:$('testMessage').value,test_mode:$('testMode')?.value||'basic'};
   let label='选定范围';
   if(target==='all'){body.all=true;label='全部中转站（每站默认模型）'}
   else if(target==='current'){body.providerIndex='current';label='当前使用'}
   else if(target.startsWith('agent:')){body.agent=target.split(':')[1];label=agentLabel(body.agent)+' 当前可用'}
   else if(target.startsWith('p:')){const parts=target.split(':');body.providerIndex=Number(parts[1]);body.model=decodeURIComponent(parts.slice(2).join(':'));label=body.providerIndex+'号 / '+body.model;}
   $('testResults').innerHTML='<div class="muted">测试中，请稍等...</div>';
-  appendTestLog('开始检测：'+label,'run');
+  appendTestLog('开始检测：'+label+' · '+(body.test_mode==='hermes_stream'?'Hermes 流式工具调用':'普通回复'),'run');
   try{
     const r=await api('/test',{method:'POST',body:JSON.stringify(body),sourceButton});
     const results=r.results||[];
@@ -846,7 +846,7 @@ async function testAgentCurrent(agent){
   appendTestLog('开始检测：'+label,'run');
   if(box) box.innerHTML='<div class="muted">正在测试当前模型...</div>';
   try{
-    const r=await api('/test',{method:'POST',body:JSON.stringify({agent,message:$('testMessage')?.value||'你好，请用一句话回复：测试成功'})});
+    const r=await api('/test',{method:'POST',body:JSON.stringify({agent,message:$('testMessage')?.value||'你好，请用一句话回复：测试成功',test_mode:$('testMode')?.value||'basic'})});
     const html=(r.results||[]).map(oneResultHtml).join('') || '<div class="err">没有返回结果</div>';
     if(box) box.innerHTML='<div class="results">'+html+'</div>';
     (r.results||[]).forEach(one=>appendTestLog(summarizeResult(one),resultLogType(one)));
@@ -880,7 +880,7 @@ async function testProviderAllModels(providerIndex, fromTop=false){
     appendTestLog('['+(i+1)+'/'+models.length+'] 正在检测 '+m,'run');
     if(box) box.innerHTML='<div class="muted">正在测试 '+esc(m)+' ...</div>';
     try{
-      const r=await api('/test',{method:'POST',body:JSON.stringify({providerIndex,model:m,message:$('testMessage')?.value||'你好，请用一句话回复：测试成功'})});
+      const r=await api('/test',{method:'POST',body:JSON.stringify({providerIndex,model:m,message:$('testMessage')?.value||'你好，请用一句话回复：测试成功',test_mode:$('testMode')?.value||'basic'})});
       const one=(r.results||[])[0];
       if(one){results.push(one); one.ok?ok++:bad++; appendTestLog(summarizeResult(one),resultLogType(one));}
       else{bad++; appendTestLog(p.id+'号 / '+m+'：没有返回结果','bad')}
@@ -902,7 +902,7 @@ async function testOneModel(providerIndex, model){
   appendTestLog('开始检测：'+providerIndex+'号 / '+model,'run');
   if(box) box.innerHTML='<div class="muted">正在测试 '+esc(model)+' ...</div>';
   try{
-    const r=await api('/test',{method:'POST',body:JSON.stringify({providerIndex,model,message:$('testMessage').value||'你好，请用一句话回复：测试成功'})});
+    const r=await api('/test',{method:'POST',body:JSON.stringify({providerIndex,model,message:$('testMessage').value||'你好，请用一句话回复：测试成功',test_mode:$('testMode')?.value||'basic'})});
     const html=(r.results||[]).map(oneResultHtml).join('') || '<div class="err">没有返回结果</div>';
     if(box) box.innerHTML='<div class="results">'+html+'</div>';
     (r.results||[]).forEach(one=>appendTestLog(summarizeResult(one),resultLogType(one)));
@@ -916,8 +916,10 @@ async function testOneModel(providerIndex, model){
 }
 function oneResultHtml(r){
   const good=r.ok;
-  const detail=good?('<div class="reply">'+esc(r.text)+'</div>'):('<div class="err">'+esc(r.error|| (r.empty?'HTTP 成功但返回空内容':'测试失败'))+'</div>');
-  return '<div class="result '+(good?'ok':'bad')+'"><div class="rhead"><div><b>'+esc(r.providerIndex)+'号：'+esc(r.provider_name)+'</b><div class="pmeta">'+esc(r.model)+' · '+esc(r.base_url)+' · '+esc(r.api_mode)+'</div></div><span class="pill '+(good?'ok':'bad')+'">'+(good?'可用':'不可用/空回复')+' · HTTP '+esc(r.http_status)+' · '+esc(r.latency_ms)+'ms</span></div>'+detail+'</div>';
+  const stream=r.test_mode==='hermes_stream';
+  const streamDetail=stream?'<div class="pmeta">'+esc(r.content_type||'无 Content-Type')+' · SSE 事件 '+esc(r.stream_events||0)+' · '+(r.stream_done?'正常结束':'结束标记缺失')+' · 工具调用 '+esc((r.tool_calls||[]).length)+' · '+(r.tool_ok?'参数校验通过':'参数校验失败')+'</div>':'';
+  const detail=good?('<div class="reply">'+esc(stream?'已收到有效的 hermes_test_tool 流式工具调用':r.text)+'</div>'):('<div class="err">'+esc(r.error|| (r.empty?'HTTP 成功但返回空内容':'测试失败'))+'</div>');
+  return '<div class="result '+(good?'ok':'bad')+'"><div class="rhead"><div><b>'+esc(r.providerIndex)+'号：'+esc(r.provider_name)+'</b><div class="pmeta">'+esc(r.model)+' · '+esc(r.base_url)+' · '+esc(r.api_mode)+'</div>'+streamDetail+'</div><span class="pill '+(good?'ok':'bad')+'">'+(good?(stream?'Hermes兼容':'可用'):'不可用/空回复')+' · HTTP '+esc(r.http_status)+' · '+esc(r.latency_ms)+'ms</span></div>'+detail+'</div>';
 }
 function renderTestResults(rs){
   $('testResults').innerHTML=rs.map(oneResultHtml).join('') || '<p class="muted">没有结果</p>';
