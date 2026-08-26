@@ -804,6 +804,7 @@ function imageRelayForCfg(cfg) {
     base_url,
     api_key: raw.api_key || cfg.model?.api_key || '',
     api_mode: raw.api_mode || current.api_mode || 'chat_completions',
+    allow_private_network: raw.allow_private_network === true,
     stored: Array.from(new Set((matched?.norm?.models || []).filter(isImageModelName))),
   };
 }
@@ -1716,7 +1717,13 @@ router.post('/test', async (ctx) => {
     const startedAll = Date.now();
     const results = await mapConcurrent(targets, 4, async (t) => {
       if (testMode === 'hermes_stream' && t.provider.api_mode === 'anthropic_messages') return { providerIndex: t.providerIndex, provider_name: t.provider_name, base_url: t.provider.base_url, ok: false, http_status: 0, latency_ms: 0, model: t.model, api_mode: t.provider.api_mode, test_mode: testMode, text: '', empty: false, error: 'Claude Messages格式暂未支持流式工具诊断' };
-      const result = await testProvider(t.provider, t.model, message, testMode);
+      let result;
+      if(isImageModelName(t.model)){
+        result=await testImageModelDirect({base_url:t.provider.base_url,api_key:t.provider.api_key,allow_private_network:t.provider.allow_private_network===true},t.model);
+        result={...result,model:t.model,api_mode:'images_generations',text:result.ok?'图片生成成功':'',empty:false};
+      }else{
+        result=await testProvider(t.provider, t.model, message, testMode);
+      }
       return { providerIndex: t.providerIndex, provider_name: t.provider_name, base_url: t.provider.base_url, ...result };
     });
     ctx.body = { ok: true, message, test_mode: testMode, count: results.length, latency_ms: Date.now() - startedAll, results };
@@ -1810,6 +1817,48 @@ router.post('/image-gen/models', async (ctx) => {
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message };
+  }
+});
+
+async function testImageModelDirect(relay, model, timeoutMs = 90000) {
+  const started = Date.now();
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const { res, raw } = await withOutboundResponse(endpoint(relay.base_url, '/images/generations'), {
+      method: 'POST',
+      headers: { accept: 'application/json', 'content-type': 'application/json', authorization: `Bearer ${relay.api_key}` },
+      body: JSON.stringify({ model, prompt: 'A simple blue circle on a plain white background', n: 1, size: '1024x1024' }),
+      signal: ac.signal,
+    }, async (response) => ({ res: response, raw: await readResponseText(response, 4 * 1024 * 1024) }), { allowPrivate: relay.allow_private_network });
+    let data = null;
+    try { data = JSON.parse(raw); } catch {}
+    const image = data?.data?.[0];
+    const hasImage = Boolean(image?.url || image?.b64_json || image?.revised_prompt);
+    const error = data?.error?.message || data?.error || (!res.ok ? raw.slice(0, 1000) : !hasImage ? '接口未返回图片数据' : '');
+    return { ok: Boolean(res.ok && hasImage), http_status: res.status, latency_ms: Date.now() - started, error: typeof error === 'string' ? error.slice(0, 1000) : JSON.stringify(error || '').slice(0, 1000) };
+  } catch (e) {
+    return { ok: false, http_status: 0, latency_ms: Date.now() - started, error: e.name === 'AbortError' ? '请求超时' : e.message };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+router.post('/image-gen/test', async (ctx) => {
+  try {
+    const targetAgent = String(ctx.request.body?.agent || 'default').trim();
+    const model = String(ctx.request.body?.model || '').trim();
+    if (!model) throw new Error('生图模型不能为空');
+    const agent = getAgent(targetAgent);
+    const { cfg } = await loadConfigDoc(agent.config);
+    const relay = imageRelayForCfg(cfg);
+    if (!relay.api_key) throw new Error('当前中转没有 API Key，无法测试');
+    const result = await testImageModelDirect(relay, model);
+    if (!result.ok) ctx.status = result.http_status >= 400 ? result.http_status : 502;
+    ctx.body = { ...result, model, agent: agent.id, relay: { name: relay.name, base_url: relay.base_url } };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, http_status: 0, latency_ms: 0, error: e.message };
   }
 });
 

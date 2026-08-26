@@ -300,7 +300,7 @@ function imageAgentCard(a){
   const opts=models.map(m=>`<option value="${escAttr(m)}" ${m===current?'selected':''}>${esc(m)}</option>`).join('');
   const relay=cur.provider_name||cur.provider||ig.provider||'-';
   const url=cur.base_url||ig.base_url||'-';
-  return `<div class="agentCard imageAgentCard"><div class="agentTop"><div class="agentName">${esc(a.profile||a.id)}</div><div class="agentProfile">生图</div></div><div class="agentLine"><div class="label">生图</div><div class="value">${esc(current||'-')}</div></div><div class="agentLine"><div class="label">中转</div><div class="value">${esc(relay)} · ${esc(url)}</div></div><select id="image_model_${escAttr(a.id)}">${opts}</select><div class="imgActions"><button type="button" class="ghostSm" data-action="fetch-image-models" data-agent="${escAttr(a.id)}">获取</button><button class="primary" data-action="switch-image-gen" data-agent="${escAttr(a.id)}">切换</button></div>${hint?`<div class="muted">${esc(hint)}</div>`:''}</div>`;
+  return `<div class="agentCard imageAgentCard"><div class="agentTop"><div class="agentName">${esc(a.profile||a.id)}</div><div class="agentProfile">生图</div></div><div class="agentLine"><div class="label">生图</div><div class="value">${esc(current||'-')}</div></div><div class="agentLine"><div class="label">中转</div><div class="value">${esc(relay)} · ${esc(url)}</div></div><select id="image_model_${escAttr(a.id)}">${opts}</select><div class="imgActions"><button type="button" class="ghostSm" data-action="fetch-image-models" data-agent="${escAttr(a.id)}">获取</button><button type="button" class="ghostSm" data-action="test-image-model" data-agent="${escAttr(a.id)}">测试</button><button class="primary" data-action="switch-image-gen" data-agent="${escAttr(a.id)}">切换</button></div>${hint?`<div class="muted">${esc(hint)}</div>`:''}</div>`;
 }
 function renderImageGen(){
   const box=$('imageGenBox');if(!box)return;
@@ -328,6 +328,7 @@ async function fetchImageModels(agent){
     renderImageGen();
   }
 }
+async function testImageModel(agent,sourceButton){const model=$('image_model_'+agent)?.value;if(!model)return toast('请先选择生图模型');window.IMAGE_MODEL_HINT=window.IMAGE_MODEL_HINT||{};window.IMAGE_MODEL_HINT[agent]='正在调用图片生成接口测试…';renderImageGen();try{const r=await api('/image-gen/test',{method:'POST',body:JSON.stringify({agent,model}),sourceButton});window.IMAGE_MODEL_HINT[agent]=`测试成功 · HTTP ${r.http_status} · ${r.latency_ms}ms · ${r.relay?.name||'中转'}`;toast('生图模型测试成功：'+model)}catch(e){window.IMAGE_MODEL_HINT[agent]='测试失败：'+e.message;toast('生图模型测试失败：'+e.message)}renderImageGen()}
 async function switchImageGen(agent){const model=agent==='all'?$('imageModelAll').value:$('image_model_'+agent).value;if(!await askConfirm('确定把 '+agentLabel(agent)+' 的生图模型切换到 '+model+'？\\n将写入该 agent 配置，中转按它当前正在用的那家。'))return;try{const r=await api('/image-gen/switch',{method:'POST',body:JSON.stringify({agent,model})});store.state=r.state;renderImageGen();toast('已切换生图模型：'+agentLabel(agent)+' / '+model)}catch(e){toast(e.message)}}
 function renderCurrent(c){
   const agents=store.state.agents&&store.state.agents.length?store.state.agents:[{id:'default',name:'Agent1',profile:'agent1',current:c||{}}];
@@ -1087,7 +1088,7 @@ async function installGateway(){
 async function restartGateway(sourceButton){const agent=$('restartAgent')?.value||'default';if(!await askConfirm('确定重启 '+agentLabel(agent)+' 的 Gateway？会中断对应 agent 当前正在运行的任务。'))return;try{toast('正在重启 '+agentLabel(agent)+' Gateway...');await api('/restart-gateway',{method:'POST',body:JSON.stringify({agent}),sourceButton});toast(agentLabel(agent)+' Gateway 已重启');await serviceStatus()}catch(e){toast('重启失败：'+(e?.message||'请稍后重试'))}}
 
 const DYNAMIC_ACTIONS={
- 'fetch-image-models':b=>fetchImageModels(b.dataset.agent),'switch-image-gen':b=>switchImageGen(b.dataset.agent),
+ 'fetch-image-models':b=>fetchImageModels(b.dataset.agent),'test-image-model':b=>testImageModel(b.dataset.agent,b),'switch-image-gen':b=>switchImageGen(b.dataset.agent),
  'test-agent-current':b=>testAgentCurrent(b.dataset.agent),'delete-agent':b=>deleteAgent(b.dataset.agent,b.dataset.label),
  'switch-model':b=>switchModel(Number(b.dataset.provider),b.dataset.model,b.dataset.agent),'delete-model':b=>deleteModel(Number(b.dataset.provider),b.dataset.model),
  'test-model':b=>testOneModel(Number(b.dataset.provider),b.dataset.model),'refresh-provider':b=>refreshProviderModels(Number(b.dataset.provider)),

@@ -79,6 +79,36 @@ test("批量测试可以暂停并继续", async ({ page }) => {
   await expect(runButton).toHaveText("开始测试");
 });
 
+test("生图页面提供图片生成接口专项测试", async ({ page }) => {
+  await page
+    .locator('[data-target="imageGenSection"]')
+    .evaluate((button) => button.click());
+  await expect(
+    page.locator('[data-action="test-image-model"][data-agent="default"]'),
+  ).toBeVisible();
+
+  let requestBody;
+  await page.route("**/api/image-gen/test", async (route) => {
+    requestBody = route.request().postDataJSON();
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        http_status: 200,
+        latency_ms: 321,
+        relay: { name: "fixture" },
+      }),
+    });
+  });
+  await page
+    .locator('[data-action="test-image-model"][data-agent="default"]')
+    .click();
+  await expect.poll(() => requestBody?.agent).toBe("default");
+  await expect(page.locator("#imageGenBox")).toContainText(
+    "测试成功 · HTTP 200 · 321ms",
+  );
+});
+
 test("手机端测试结果卡片不会被长元信息撑出视口", async ({ page }) => {
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
