@@ -88,6 +88,7 @@ const STATIC_EVENT_HANDLERS = {
 
   76: function(event){closeProviderEdit()},
   77: function(event){saveProviderEdit(this)},
+  78: function(event){updateUsageCalculator()},
 };
 function installStaticEventHandlers(){
   for(const type of ['click','change','input','keydown','submit']){
@@ -347,10 +348,21 @@ function fmtNum(n){return Number(n||0).toLocaleString('zh-CN')}
 function fmtUsage(n,unit='tokens'){
  const value=Number(n||0),abs=Math.abs(value);
  let shown=fmtNum(value);
- if(abs>=100000000)shown=(value/100000000).toLocaleString('zh-CN',{maximumFractionDigits:2})+' 亿';
- else if(abs>=10000)shown=(value/10000).toLocaleString('zh-CN',{maximumFractionDigits:2})+' 万';
+ const scales=[[1e44,'载'],[1e40,'正'],[1e36,'涧'],[1e32,'沟'],[1e28,'穰'],[1e24,'秭'],[1e20,'垓'],[1e16,'京'],[1e12,'万亿'],[1e8,'亿'],[1e4,'万']];
+ const scale=scales.find(([limit])=>abs>=limit);
+ if(scale)shown=(value/scale[0]).toLocaleString('zh-CN',{maximumFractionDigits:2})+' '+scale[1];
  return `${shown} ${unit}`;
 }
+let LAST_USAGE_TOTAL=0;
+function updateUsageCalculator(){
+ const price=Math.max(0,Number($('usageUnitPrice')?.value||0)),multiplier=Math.max(0,Number($('usageMultiplier')?.value||1));
+ try{localStorage.setItem('hermes-usage-unit-price',String(price));localStorage.setItem('hermes-usage-multiplier',String(multiplier))}catch{}
+ const cost=LAST_USAGE_TOTAL/1000000*price*multiplier,out=$('usageCalculatedCost');
+ if(out)out.textContent=`$${cost.toLocaleString('en-US',{minimumFractionDigits:4,maximumFractionDigits:4})}`;
+ const detail=$('usageCalculatedDetail');if(detail)detail.textContent=`${fmtUsage(LAST_USAGE_TOTAL)} ÷ 100万 × $${price.toLocaleString('en-US',{maximumFractionDigits:6})} × ${multiplier.toLocaleString('zh-CN',{maximumFractionDigits:4})}`;
+}
+function initUsageCalculator(){try{$('usageUnitPrice').value=localStorage.getItem('hermes-usage-unit-price')||'';$('usageMultiplier').value=localStorage.getItem('hermes-usage-multiplier')||'1'}catch{}updateUsageCalculator()}
+initUsageCalculator();
 function hasMoney(b){return Number(b?.actual_cost||0)>0 || Number(b?.estimated_cost||0)>0}
 function fmtMoney(n){return '$'+Number(n||0).toFixed(4)}
 function moneyLine(b){return hasMoney(b)?`费用：预估 ${fmtMoney(b.estimated_cost)} / 实际 ${fmtMoney(b.actual_cost)}`:'费用未记录：当前自定义中转站没有 Hermes 价格表或实际扣费回传'}
@@ -370,6 +382,7 @@ async function loadUsage(){
     const u=await api('/usage');
     if(!u.ok) throw new Error(u.error||'使用量读取失败');
     USAGE_LOADED=true;
+    LAST_USAGE_TOTAL=Number(u.total?.total_tokens||0);updateUsageCalculator();
     const moneyNote=hasMoney(u.total)?'已记录费用':'费用未记录';
     $('usageSource').textContent='Hermes 对话 · '+moneyNote+' · '+(u.total.last_at_iso||'暂无记录');
     const providers=(u.by_provider||[]).map(p=>`<div class="usageModelRow"><div><b>${esc(p.provider||'-')}</b><div class="sub">${esc(shortUrl(p.base_url))}</div><div class="sub">调用 ${fmtUsage(p.api_calls,'次')} · 输入 ${fmtUsage(p.input_tokens)} / 输出 ${fmtUsage(p.output_tokens)}</div><div class="sub">${moneyLine(p)}</div></div><div class="v" title="${fmtNum(p.total_tokens)} tokens">${fmtUsage(p.total_tokens)}</div></div>`).join('') || '<div class="muted">暂无中转站统计</div>';

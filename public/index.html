@@ -22,7 +22,7 @@
           : "#f4f6f8";
       } catch {}
     </script>
-    <link rel="stylesheet" href="css/app.css?v=v1.3.41" />
+    <link rel="stylesheet" href="css/app.css?v=v1.3.43" />
   </head>
   <body>
     <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -30,7 +30,7 @@
         <header class="loginHead">
           <div class="loginMark" aria-hidden="true">◆</div>
           <div class="loginBrand">
-            <span>HERMES PANEL · v1.3.41</span>
+            <span>HERMES PANEL · v1.3.43</span>
             <h1 id="loginTitle">登录模型台</h1>
           </div>
         </header>
@@ -85,7 +85,7 @@
             >
               <span class="versionBadgeCopy">
                 <small>控制台版本</small>
-                <strong id="sidePanelVersion">v1.3.41</strong>
+                <strong id="sidePanelVersion">v1.3.43</strong>
                 <em id="versionBadgeState">检查中</em>
               </span>
               <span class="versionChevron" aria-hidden="true">⌄</span>
@@ -99,7 +99,7 @@
               <div class="versionCurrentRow">
                 <span>
                   <small>当前运行</small>
-                  <b id="versionPopoverNumber">v1.3.41</b>
+                  <b id="versionPopoverNumber">v1.3.43</b>
                   <code id="versionCurrentSha">--------</code>
                 </span>
                 <span id="versionStatusMark" class="versionStateChip"
@@ -796,6 +796,11 @@
                   </div>
                 </div>
                 <span id="usageSource" class="muted">点击按钮查看</span>
+                <div class="usageCalculator">
+                  <label>每 100 万 Token 单价（USD）<input id="usageUnitPrice" type="number" min="0" step="0.000001" placeholder="例如 2.5" data-static-input="78" /></label>
+                  <label>计费倍率<input id="usageMultiplier" type="number" min="0" step="0.01" value="1" data-static-input="78" /></label>
+                  <div class="usageCalculated"><span>累计估算消费</span><b id="usageCalculatedCost">$0.0000</b><small id="usageCalculatedDetail">输入单价后实时计算</small></div>
+                </div>
                 <div class="actions">
                   <button id="usageToggleBtn" data-static-click="47">
                     查看 API 使用量
@@ -1167,6 +1172,6 @@
       </section>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="js/app.js?v=v1.3.41"></script>
+    <script type="module" src="js/app.js?v=v1.3.43"></script>
   </body>
 </html>
