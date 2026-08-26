@@ -14,25 +14,40 @@ test("完整编辑中转站且 API Key 默认隐藏、可切换显示", async ({
   const key = page.locator("#editKey");
   await expect(modal).toBeVisible();
   await expect(page.locator("#editName")).toHaveValue(/onclick/);
-  await expect(page.locator("#editUrl")).toHaveValue("https://fixture.invalid/v1");
+  await expect(page.locator("#editUrl")).toHaveValue(
+    "https://fixture.invalid/v1",
+  );
   await expect(page.locator("#editMode")).toHaveValue("chat_completions");
   await expect(page.locator("#editModel")).toHaveValue(/onclick/);
   await expect(key).toHaveValue("");
   await expect(key).toHaveAttribute("type", "password");
+  await page.route("**/api/providers/*/api-key", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, api_key: "fixture-secret-key" }),
+    }),
+  );
   await page.locator('[data-secret-target="editKey"]').click();
+  await expect(key).toHaveValue("fixture-secret-key");
   await expect(key).toHaveAttribute("type", "text");
-  await expect(page.locator('[data-secret-target="editKey"]')).toHaveText("隐藏");
+  await expect(page.locator('[data-secret-target="editKey"]')).toHaveText(
+    "隐藏",
+  );
   await page.locator('[data-secret-target="editKey"]').click();
   await expect(key).toHaveAttribute("type", "password");
   const box = await modal.locator(".providerEditPanel").boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390);
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(844);
 });
 
 test("14 页导航保留 SVG，移动菜单可重复开关", async ({ page }) => {
   const nav = page.locator(".sideNav button[data-target]");
   await expect(nav).toHaveCount(14);
-  await expect(page.locator('[data-target="currentSection"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-target="currentSection"]')).toHaveClass(
+    /active/,
+  );
   const svgCount = await page.locator(".sideNav svg").count();
   for (let index = 0; index < 14; index += 1) {
     await nav.nth(index).click();
@@ -83,7 +98,9 @@ test("侧栏版本入口可检查更新并展示回滚版本", async ({ page }) 
   await expect(page.locator("#versionActionBtn")).toContainText("立即更新到");
   await page.locator("#versionActionBtn").click();
   await expect(page.locator("#confirmModal")).toHaveClass(/show/);
-  await expect(page.locator("#confirmMessage")).toContainText("确定将面板更新到");
+  await expect(page.locator("#confirmMessage")).toContainText(
+    "确定将面板更新到",
+  );
   await expect(page.locator("#versionLatestRow")).toBeVisible();
   await expect(page.locator("#versionRollbackList")).toContainText("v1.1.4");
   await expect(page.locator("[data-rollback-id]")).toHaveText("回滚");

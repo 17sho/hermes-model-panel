@@ -1461,6 +1461,19 @@ router.put('/providers/:idx', async (ctx) => {
   }
 });
 
+router.get('/providers/:idx/api-key', async (ctx) => {
+  const idx = Number(ctx.params.idx) - 1;
+  const { cfg } = await loadConfigDoc();
+  const providers = Array.isArray(cfg.custom_providers) ? cfg.custom_providers : [];
+  if (!Number.isInteger(idx) || idx < 0 || !providers[idx]) {
+    ctx.status = 404;
+    ctx.body = { ok: false, error: '中转站不存在' };
+    return;
+  }
+  ctx.set('Cache-Control', 'no-store');
+  ctx.body = { ok: true, api_key: String(providers[idx].api_key || '') };
+});
+
 router.delete('/providers/:idx', async (ctx) => {
   try {
     const idx = Number(ctx.params.idx) - 1;
