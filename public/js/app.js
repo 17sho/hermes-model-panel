@@ -1017,8 +1017,8 @@ async function loadGatewayLogs(){
   if(!box)return;box.classList.remove('hidden');box.innerHTML='<span class="inlineLoader compact" role="status">正在读取日志</span>';
   try{const r=await api('/gateway-logs?agent='+encodeURIComponent(agent)+'&lines=160');box.textContent=r.logs||'暂无日志'}catch(e){box.textContent='读取失败：'+e.message}
 }
-function readableRule(raw){
- const s=String(raw||''),l=s.toLowerCase();
+function readableRule(raw,priority=null){
+ const s=String(raw||'');
  const rules=[
   [/started|startup complete|gateway.*running|application startup/i,'success','Gateway 已启动','服务已经开始运行，可以正常接收消息。','不需要操作。'],
   [/stopped|stopping|shutting down|shutdown/i,'warning','Gateway 已停止','服务目前不能接收或回复新消息。','如果不是主动停止，请到设置中检查并重新启动。'],
@@ -1033,10 +1033,16 @@ function readableRule(raw){
   [/error|exception|traceback|failed|fatal|panic/i,'error','运行时出现异常','某项操作执行失败，相关功能可能暂时不可用。','展开原始内容查看细节；持续出现时请技术人员处理。'],
   [/warn|warning|deprecated/i,'warning','系统发出提醒','当前仍可运行，但存在需要留意的情况。','展开原始内容确认提醒内容。']
  ];
+ if(Number.isInteger(priority)){
+  if(priority<=3)return{level:'error',title:'运行时出现异常',impact:'Gateway 记录了一条错误级事件，相关功能可能受到影响。',advice:'展开原始内容查看细节；持续出现时请技术人员处理。'};
+  if(priority===4)return{level:'warning',title:'系统发出提醒',impact:'Gateway 记录了一条警告，当前通常仍可继续运行。',advice:'展开原始内容确认提醒内容。'};
+  for(const [re,level,title,impact,advice] of rules)if(level==='success'&&re.test(s))return{level,title,impact,advice};
+  return{level:'info',title:'普通运行记录',impact:'这是 Gateway 的常规运行信息，暂未发现错误级事件。',advice:'通常不需要操作；需要技术细节时可展开原始内容。'};
+ }
  for(const [re,level,title,impact,advice] of rules)if(re.test(s))return{level,title,impact,advice};
  return{level:'info',title:'普通运行记录',impact:'这是 Gateway 的常规运行信息，暂未发现明确异常。',advice:'通常不需要操作；需要技术细节时可展开原始内容。'};
 }
-function parseReadableLog(line,index){const m=String(line).match(/^(\d{4}-\d{2}-\d{2}T\S+)\s+([^\s]+)\s+([^:]+):\s?(.*)$/);const raw=String(line);const rule=readableRule(raw);return{id:index,time:m?.[1]?.replace('T',' ')||'',module:m?.[3]?.trim()||'Gateway',message:m?.[4]||raw,raw,...rule}}
+function parseReadableLog(entry,index){const structured=entry&&typeof entry==='object';const raw=String(structured?entry.raw||entry.message||'':entry);const m=raw.match(/^(\d{4}-\d{2}-\d{2}T\S+)\s+([^:]+):\s?(.*)$/);const priority=structured&&Number.isInteger(entry.priority)?entry.priority:null;const rule=readableRule(raw,priority);return{id:index,time:(structured?entry.time:m?.[1])?.replace('T',' ')||'',module:(structured?entry.module:m?.[2])?.trim()||'Gateway',message:structured?String(entry.message||raw):m?.[3]||raw,raw,priority,...rule}}
 function renderReadableLogs(){
  const box=$('readableLogs'),sum=$('readableSummary');if(!box)return;const filter=$('readableLevel')?.value||'all';
  let items=store.readableLogEvents.filter(x=>filter==='all'||(filter==='error'?x.level==='error':filter==='warning'?['error','warning'].includes(x.level):x.level==='success'));
@@ -1049,7 +1055,7 @@ function fillReadableAgents(){const sel=$('readableAgent');if(!sel)return;const 
 async function loadReadableLogs(){
  const seq=nextRequestSequence('logs');
  const box=$('readableLogs'),btn=$('readableRefreshBtn');if(!box)return;fillReadableAgents();const agent=$('readableAgent')?.value||'default',lines=$('readableLines')?.value||160;if(btn?.dataset.busy==='1')return;
- try{if(btn){btn.dataset.busy='1';btn.disabled=true;btn.classList.add('loadingBtn');btn.textContent='读取中'}box.innerHTML='<span class="inlineLoader skeleton" role="status">正在翻译日志</span>';const r=await api('/gateway-logs?agent='+encodeURIComponent(agent)+'&lines='+encodeURIComponent(lines));if(!isLatestRequest('logs',seq))return;store.readableLogEvents=String(r.logs||'').split(/\r?\n/).filter(Boolean).map(parseReadableLog).reverse();renderReadableLogs()}catch(e){if(!isLatestRequest('logs',seq))return;box.innerHTML=emptyState('日志读取失败',e.message||'请稍后重试');toast('日志读取失败：'+e.message)}finally{if(isLatestRequest('logs',seq)&&btn){btn.dataset.busy='';btn.disabled=false;btn.classList.remove('loadingBtn');btn.textContent='↻ 刷新'}}
+ try{if(btn){btn.dataset.busy='1';btn.disabled=true;btn.classList.add('loadingBtn');btn.textContent='读取中'}box.innerHTML='<span class="inlineLoader skeleton" role="status">正在翻译日志</span>';const r=await api('/gateway-logs?agent='+encodeURIComponent(agent)+'&lines='+encodeURIComponent(lines));if(!isLatestRequest('logs',seq))return;const source=Array.isArray(r.entries)?r.entries:String(r.logs||'').split(/\r?\n/).filter(Boolean);store.readableLogEvents=source.map(parseReadableLog).reverse();renderReadableLogs()}catch(e){if(!isLatestRequest('logs',seq))return;box.innerHTML=emptyState('日志读取失败',e.message||'请稍后重试');toast('日志读取失败：'+e.message)}finally{if(isLatestRequest('logs',seq)&&btn){btn.dataset.busy='';btn.disabled=false;btn.classList.remove('loadingBtn');btn.textContent='↻ 刷新'}}
 }
 async function saveServiceScope(){
   const agent=$('pairingAgent')?.value||'default',scope=$('serviceScope')?.value||'auto',btn=$('saveScopeBtn');

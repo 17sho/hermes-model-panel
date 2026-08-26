@@ -2504,9 +2504,23 @@ router.get('/gateway-logs', async (ctx) => {
     }
     const user = effective === 'user';
     const env = user ? { ...process.env, XDG_RUNTIME_DIR: '/run/user/0', DBUS_SESSION_BUS_ADDRESS: 'unix:path=/run/user/0/bus' } : process.env;
-    const args = [...(user ? ['--user'] : []), '-u', agent.service, '-n', String(lines), '--no-pager', '--output=short-iso'];
+    const args = [...(user ? ['--user'] : []), '-u', agent.service, '-n', String(lines), '--no-pager', '--output=json'];
     const { stdout = '' } = await execFileAsync('journalctl', args, { timeout: 15000, env, maxBuffer: 500000 });
-    ctx.body = { ok: true, agent: agent.id, scope: effective, logs: stdout };
+    const entries = stdout.split(/\r?\n/).filter(Boolean).flatMap((line) => {
+      try {
+        const item = JSON.parse(line);
+        const priority = Number(item.PRIORITY);
+        const micros = Number(item.__REALTIME_TIMESTAMP);
+        const time = Number.isFinite(micros) ? new Date(Math.floor(micros / 1000)).toISOString() : '';
+        const module = String(item.SYSLOG_IDENTIFIER || item._COMM || 'Gateway');
+        const message = Array.isArray(item.MESSAGE) ? item.MESSAGE.join(' ') : String(item.MESSAGE || '');
+        const raw = `${time} ${module}: ${message}`.trim();
+        return [{ time, module, message, raw, priority: Number.isInteger(priority) ? priority : null }];
+      } catch {
+        return [];
+      }
+    });
+    ctx.body = { ok: true, agent: agent.id, scope: effective, logs: entries.map((item) => item.raw).join('\n'), entries };
   } catch (e) {
     ctx.status = 400; ctx.body = { ok: false, error: publicError(e, '读取日志失败') };
   }
