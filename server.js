@@ -275,12 +275,13 @@ const app = new Koa();
 const router = new Router({ prefix: '/api' });
 // Koa needs trusted loopback proxy protocol metadata so it can emit Secure
 // cookies over an HTTPS-terminating reverse proxy. Strip forwarded metadata
-// from every non-loopback peer before Koa consumes it; security/rate-limit IP
-// decisions continue to use the direct socket address.
+// from every non-loopback peer before Koa consumes it. Security and rate-limit
+// IP decisions trust forwarded metadata only from the local reverse proxy.
 app.proxy = true;
+const LOOPBACK_PEERS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 app.use(async (ctx, next) => {
   const peer = String(ctx.req.socket?.remoteAddress || '');
-  const loopback = peer === '127.0.0.1' || peer === '::1' || peer === '::ffff:127.0.0.1';
+  const loopback = LOOPBACK_PEERS.has(peer);
   if (!loopback) {
     for (const name of ['forwarded', 'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port']) {
       delete ctx.req.headers[name];
@@ -288,6 +289,16 @@ app.use(async (ctx, next) => {
   }
   await next();
 });
+
+function clientIp(ctx) {
+  const peer = String(ctx.req.socket?.remoteAddress || 'unknown');
+  if (!LOOPBACK_PEERS.has(peer)) return peer;
+  const forwarded = String(ctx.get('x-forwarded-for') || '')
+    .split(',')
+    .map((value) => value.trim())
+    .find(Boolean);
+  return forwarded || peer;
+}
 
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
@@ -1226,7 +1237,7 @@ router.post('/login', async (ctx) => {
     ctx.body = { ...authPublicStatus(), password_enabled: false, csrf_token: tokenPayload(token).csrf };
     return;
   }
-  const ip = String(ctx.req.socket?.remoteAddress || 'unknown');
+  const ip = clientIp(ctx);
   const rate = loginRateRecord(ip);
   if (rate.count >= LOGIN_MAX_ATTEMPTS) {
     ctx.set('Retry-After', String(Math.max(1, Math.ceil((LOGIN_WINDOW_MS - (Date.now() - rate.started)) / 1000))));
@@ -2801,4 +2812,4 @@ if (path.resolve(process.argv[1] || '') === path.resolve(new URL(import.meta.url
   server.maxRequestsPerSocket = 100;
 }
 
-export { app, loginRateRecord, loginAttempts, updateConfig, updatePanelMeta, upsertEnvValues };
+export { app, clientIp, loginRateRecord, loginAttempts, updateConfig, updatePanelMeta, upsertEnvValues };

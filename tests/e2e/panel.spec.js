@@ -35,11 +35,22 @@ test("完整编辑中转站且 API Key 默认隐藏、可切换显示", async ({
   );
   await page.locator('[data-secret-target="editKey"]').click();
   await expect(key).toHaveAttribute("type", "password");
-  const box = await modal.locator(".providerEditPanel").boundingBox();
+  const panel = modal.locator(".providerEditPanel");
+  const close = modal.locator(".modalHead > button");
+  const actions = modal.locator(".providerEditActions");
+  const models = page.locator("#editModels");
+  const box = await panel.boundingBox();
+  const closeBox = await close.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390);
   expect(box.y).toBeGreaterThanOrEqual(0);
   expect(box.y + box.height).toBeLessThanOrEqual(844);
+  expect(closeBox.width).toBeLessThan(100);
+  expect(closeBox.height).toBeLessThanOrEqual(44);
+  await models.scrollIntoViewIfNeeded();
+  const modelBox = await models.boundingBox();
+  const actionBox = await actions.boundingBox();
+  expect(modelBox.y + modelBox.height).toBeLessThanOrEqual(actionBox.y);
 });
 
 test("14 页导航保留 SVG，移动菜单可重复开关", async ({ page }) => {
