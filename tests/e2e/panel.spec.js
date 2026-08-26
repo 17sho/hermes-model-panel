@@ -296,6 +296,24 @@ test("Escape 通用关闭当前打开的新旧弹窗", async ({ page }) => {
   }
 });
 
+test("手机端允许缩放且表单控件不会触发 iOS 自动放大", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const viewport = await page
+    .locator('meta[name="viewport"]')
+    .getAttribute("content");
+  expect(viewport).not.toContain("maximum-scale");
+  expect(viewport).not.toContain("user-scalable=no");
+  const sizes = await page
+    .locator("input, select, textarea")
+    .evaluateAll((elements) =>
+      elements.map((element) =>
+        parseFloat(window.getComputedStyle(element).fontSize),
+      ),
+    );
+  expect(sizes.length).toBeGreaterThan(0);
+  expect(Math.min(...sizes)).toBeGreaterThanOrEqual(16);
+});
+
 for (const width of [320, 390, 900, 1024, 1100]) {
   test(`${width}px 无页面横向溢出`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
