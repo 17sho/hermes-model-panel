@@ -97,7 +97,18 @@ expected_hash="$(awk '$2 == "hermes-model-panel.tar.gz" || $2 == "*hermes-model-
 printf '%s  %s\n' "$expected_hash" "$archive" | sha256sum --check --status
 
 mkdir "$work/source"
-tar -xzf "$archive" --strip-components=1 -C "$work/source"
+# git archive may contain files at the archive root or under one top-level folder.
+tar -xzf "$archive" -C "$work/source"
+if [[ ! -f "$work/source/package.json" ]]; then
+  mapfile -t roots < <(find "$work/source" -mindepth 1 -maxdepth 1 -type d -print)
+  if [[ "${#roots[@]}" -eq 1 && -f "${roots[0]}/package.json" ]]; then
+    nested="${roots[0]}"
+    shopt -s dotglob nullglob
+    mv "$nested"/* "$work/source"/
+    shopt -u dotglob nullglob
+    rmdir "$nested"
+  fi
+fi
 [[ -f "$work/source/package.json" && -f "$work/source/server.js" ]]
 release_version="${tag#v}"
 python3 - "$work/source/package.json" "$release_version" <<'PY'
