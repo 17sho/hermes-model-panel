@@ -22,7 +22,7 @@
           : "#f4f6f8";
       } catch {}
     </script>
-    <link rel="stylesheet" href="css/app.css?v=v1.3.29" />
+    <link rel="stylesheet" href="css/app.css?v=v1.3.30" />
   </head>
   <body>
     <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -30,7 +30,7 @@
         <header class="loginHead">
           <div class="loginMark" aria-hidden="true">◆</div>
           <div class="loginBrand">
-            <span>HERMES PANEL · v1.3.29</span>
+            <span>HERMES PANEL · v1.3.30</span>
             <h1 id="loginTitle">登录模型台</h1>
           </div>
         </header>
@@ -85,7 +85,7 @@
             >
               <span class="versionBadgeCopy">
                 <small>控制台版本</small>
-                <strong id="sidePanelVersion">v1.3.29</strong>
+                <strong id="sidePanelVersion">v1.3.30</strong>
                 <em id="versionBadgeState">检查中</em>
               </span>
               <span class="versionChevron" aria-hidden="true">⌄</span>
@@ -99,7 +99,7 @@
               <div class="versionCurrentRow">
                 <span>
                   <small>当前运行</small>
-                  <b id="versionPopoverNumber">v1.3.29</b>
+                  <b id="versionPopoverNumber">v1.3.30</b>
                   <code id="versionCurrentSha">--------</code>
                 </span>
                 <span id="versionStatusMark" class="versionStateChip"
@@ -267,7 +267,11 @@
             data-static-click="73"
           >
             <span class="navGlyph" aria-hidden="true"
-              ><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5c0 5 3.2 8.6 7.5 10 4.3-1.4 7.5-5 7.5-10V6Z"/><path d="m9 12 2 2 4-5"/></svg></span
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M12 3 4.5 6v5c0 5 3.2 8.6 7.5 10 4.3-1.4 7.5-5 7.5-10V6Z"
+                />
+                <path d="m9 12 2 2 4-5" /></svg></span
             >命令批准
           </button>
           <button
@@ -293,7 +297,12 @@
             aria-label="切换夜间模式"
             title="切换夜间模式"
           >
-            <span class="themeIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg></span
+            <span class="themeIcon" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="4" />
+                <path
+                  d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"
+                /></svg></span
             ><span class="themeLabel">夜间模式</span></button
           ><button
             id="logoutBtn"
@@ -453,12 +462,23 @@
               <input
                 id="addUrl"
                 placeholder="Base URL，例如 https://api.example.com/v1"
-              /><div class="secretField"><input
-                id="addKey"
-                type="password"
-                autocomplete="new-password"
-                placeholder="API Key（不会明文展示）"
-              /><button type="button" class="secretToggle" data-secret-target="addKey" aria-label="显示 API Key" aria-pressed="false">显示</button></div>
+              />
+              <div class="secretField">
+                <input
+                  id="addKey"
+                  type="password"
+                  autocomplete="new-password"
+                  placeholder="API Key（不会明文展示）"
+                /><button
+                  type="button"
+                  class="secretToggle"
+                  data-secret-target="addKey"
+                  aria-label="显示 API Key"
+                  aria-pressed="false"
+                >
+                  显示
+                </button>
+              </div>
               <div class="row">
                 <input id="addModel" placeholder="默认模型" /><button
                   id="fetchAddModelsBtn"
@@ -475,7 +495,10 @@
                     <option value="public">仅公网和本机（推荐）</option>
                     <option value="private">允许访问普通内网</option>
                   </select>
-                  <small>仅内网、VPC、Docker 或组网中的模型服务需要开启；云元数据等危险地址始终禁止。</small>
+                  <small
+                    >仅内网、VPC、Docker
+                    或组网中的模型服务需要开启；云元数据等危险地址始终禁止。</small
+                  >
                 </div>
               </details>
               <textarea
@@ -551,7 +574,10 @@
                   <option value="basic">普通回复测试</option>
                   <option value="hermes_stream">Hermes 流式工具调用</option>
                 </select>
-                <small class="fieldHint">流式模式会强制模型调用测试工具，用于发现普通请求正常但 Hermes 无法工作的情况。</small></label
+                <small class="fieldHint"
+                  >流式模式会强制模型调用测试工具，用于发现普通请求正常但 Hermes
+                  无法工作的情况。</small
+                ></label
               ><button id="runTestBtn" class="primary" data-static-click="35">
                 开始测试
               </button>
@@ -561,6 +587,27 @@
                 查看检测日志
               </button>
             </div>
+            <section id="testOverview" class="testOverview" aria-live="polite">
+              <div class="testOverviewHead">
+                <b>测试汇总</b><span id="testProgressText">尚未开始</span>
+              </div>
+              <div
+                id="testProgressTrack"
+                class="testProgressTrack"
+                role="progressbar"
+                aria-label="测试进度"
+                aria-valuemin="0"
+                aria-valuemax="0"
+                aria-valuenow="0"
+              >
+                <i id="testProgressBar"></i>
+              </div>
+              <div class="testStats">
+                <span>总计 <b id="testTotalCount">0</b></span
+                ><span class="ok">可用 <b id="testOkCount">0</b></span
+                ><span class="bad">失败 <b id="testBadCount">0</b></span>
+              </div>
+            </section>
             <div id="testLog" class="testLog hidden">
               <header class="testLogHead">
                 <b>检测日志</b>
@@ -674,14 +721,59 @@
             </div>
           </section>
           <section id="approvalSettingsSection" class="panelSection">
-            <header class="settingsHero"><div><span class="sectionKicker">APPROVALS</span><h2>命令批准</h2><p class="muted">单独管理 Hermes 执行危险命令前是否请求你的同意。</p></div></header>
-            <div class="settingsGrid"><section class="settingsGroup settingsDanger">
-              <div class="settingsGroupHead"><span class="settingsIcon">!</span><div><h3>批准模式</h3><p class="muted">该设置作用于当前 Hermes 配置，重启 Gateway 后生效</p></div></div>
-              <div class="settingFields"><label>目标 Agent<select id="approvalAgent" data-static-change="75"></select></label><label>执行前批准<select id="approvalMode"><option value="manual">始终询问（安全，默认）</option><option value="smart">智能批准（仅高风险询问）</option><option value="off">无需同意（YOLO，高风险）</option></select></label></div>
-              <p id="approvalHint" class="settingsNote">正在读取当前设置。</p>
-              <div class="notice warn"><strong>安全提示</strong><p>选择“无需同意”后，Hermes 会直接执行被判定为危险的命令，不再向聊天发送批准请求。密钥脱敏等其他安全机制不会因此关闭。</p></div>
-              <div class="actions"><button id="saveApprovalBtn" class="danger" data-static-click="74">保存批准设置</button></div>
-            </section></div>
+            <header class="settingsHero">
+              <div>
+                <span class="sectionKicker">APPROVALS</span>
+                <h2>命令批准</h2>
+                <p class="muted">
+                  单独管理 Hermes 执行危险命令前是否请求你的同意。
+                </p>
+              </div>
+            </header>
+            <div class="settingsGrid">
+              <section class="settingsGroup settingsDanger">
+                <div class="settingsGroupHead">
+                  <span class="settingsIcon">!</span>
+                  <div>
+                    <h3>批准模式</h3>
+                    <p class="muted">
+                      该设置作用于当前 Hermes 配置，重启 Gateway 后生效
+                    </p>
+                  </div>
+                </div>
+                <div class="settingFields">
+                  <label
+                    >目标 Agent<select
+                      id="approvalAgent"
+                      data-static-change="75"
+                    ></select></label
+                  ><label
+                    >执行前批准<select id="approvalMode">
+                      <option value="manual">始终询问（安全，默认）</option>
+                      <option value="smart">智能批准（仅高风险询问）</option>
+                      <option value="off">无需同意（YOLO，高风险）</option>
+                    </select></label
+                  >
+                </div>
+                <p id="approvalHint" class="settingsNote">正在读取当前设置。</p>
+                <div class="notice warn">
+                  <strong>安全提示</strong>
+                  <p>
+                    选择“无需同意”后，Hermes
+                    会直接执行被判定为危险的命令，不再向聊天发送批准请求。密钥脱敏等其他安全机制不会因此关闭。
+                  </p>
+                </div>
+                <div class="actions">
+                  <button
+                    id="saveApprovalBtn"
+                    class="danger"
+                    data-static-click="74"
+                  >
+                    保存批准设置
+                  </button>
+                </div>
+              </section>
+            </div>
           </section>
           <section id="settingsSection" class="panelSection">
             <header class="settingsHero">
@@ -860,17 +952,97 @@
     </main>
     <div id="providerEditModal" class="modal hidden" aria-hidden="true">
       <div class="modalBackdrop" data-static-click="76"></div>
-      <section class="modalPanel providerEditPanel" role="dialog" aria-modal="true" aria-labelledby="providerEditTitle">
-        <header class="modalHead"><div><span class="sectionKicker">PROVIDER</span><h2 id="providerEditTitle">编辑中转站</h2><p class="muted">修改地址、接口、模型和访问范围。</p></div><button type="button" class="ghost" data-static-click="76">关闭</button></header>
+      <section
+        class="modalPanel providerEditPanel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="providerEditTitle"
+      >
+        <header class="modalHead">
+          <div>
+            <span class="sectionKicker">PROVIDER</span>
+            <h2 id="providerEditTitle">编辑中转站</h2>
+            <p class="muted">修改地址、接口、模型和访问范围。</p>
+          </div>
+          <button type="button" class="ghost" data-static-click="76">
+            关闭
+          </button>
+        </header>
         <div class="form providerEditForm">
           <input id="editProviderId" type="hidden" />
-          <div class="row"><label><span class="k">名称</span><input id="editName" /></label><label><span class="k">API 格式</span><select id="editMode"><option value="chat_completions">OpenAI API（/v1/chat/completions）</option><option value="anthropic_messages">Claude API（/v1/messages）</option><option value="responses">OpenAI Responses（/v1/responses）</option><option value="codex_responses">Codex Responses（/v1/responses）</option></select></label></div>
-          <label><span class="k">Base URL</span><input id="editUrl" inputmode="url" /></label>
-          <label><span class="k">API Key</span><div class="secretField"><input id="editKey" type="password" autocomplete="new-password" placeholder="点击显示可查看当前 API Key" /><button type="button" class="secretToggle" data-secret-target="editKey" data-reveal-provider-key="true" aria-label="显示 API Key" aria-pressed="false">显示</button></div><small class="fieldHint">点击“显示”可查看当前 Key；修改后保存才会替换，留空则保留原值。</small></label>
+          <div class="row">
+            <label><span class="k">名称</span><input id="editName" /></label
+            ><label
+              ><span class="k">API 格式</span
+              ><select id="editMode">
+                <option value="chat_completions">
+                  OpenAI API（/v1/chat/completions）
+                </option>
+                <option value="anthropic_messages">
+                  Claude API（/v1/messages）
+                </option>
+                <option value="responses">
+                  OpenAI Responses（/v1/responses）
+                </option>
+                <option value="codex_responses">
+                  Codex Responses（/v1/responses）
+                </option>
+              </select></label
+            >
+          </div>
+          <label
+            ><span class="k">Base URL</span><input id="editUrl" inputmode="url"
+          /></label>
+          <label
+            ><span class="k">API Key</span>
+            <div class="secretField">
+              <input
+                id="editKey"
+                type="password"
+                autocomplete="new-password"
+                placeholder="点击显示可查看当前 API Key"
+              /><button
+                type="button"
+                class="secretToggle"
+                data-secret-target="editKey"
+                data-reveal-provider-key="true"
+                aria-label="显示 API Key"
+                aria-pressed="false"
+              >
+                显示
+              </button>
+            </div>
+            <small class="fieldHint"
+              >点击“显示”可查看当前
+              Key；修改后保存才会替换，留空则保留原值。</small
+            ></label
+          >
           <label><span class="k">默认模型</span><input id="editModel" /></label>
-          <label><span class="k">其它模型</span><textarea id="editModels" placeholder="每行一个，可选"></textarea></label>
-          <details class="providerAdvanced"><summary>高级设置</summary><div class="providerAdvancedBody"><label for="editNetworkScope">网络访问范围</label><select id="editNetworkScope"><option value="public">仅公网和本机（推荐）</option><option value="private">允许访问普通内网</option></select><small>云元数据、链路本地和组播地址始终禁止。</small></div></details>
-          <div class="providerEditActions"><button type="button" data-static-click="76">取消</button><button id="saveProviderEditBtn" type="button" class="primary" data-static-click="77">保存修改</button></div>
+          <label
+            ><span class="k">其它模型</span
+            ><textarea id="editModels" placeholder="每行一个，可选"></textarea>
+          </label>
+          <details class="providerAdvanced">
+            <summary>高级设置</summary>
+            <div class="providerAdvancedBody">
+              <label for="editNetworkScope">网络访问范围</label
+              ><select id="editNetworkScope">
+                <option value="public">仅公网和本机（推荐）</option>
+                <option value="private">允许访问普通内网</option></select
+              ><small>云元数据、链路本地和组播地址始终禁止。</small>
+            </div>
+          </details>
+          <div class="providerEditActions">
+            <button type="button" data-static-click="76">取消</button
+            ><button
+              id="saveProviderEditBtn"
+              type="button"
+              class="primary"
+              data-static-click="77"
+            >
+              保存修改
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -972,10 +1144,16 @@
       aria-labelledby="confirmTitle"
     >
       <div class="modalBackdrop" data-static-click="67"></div>
-      <section class="modalPanel confirmPanel" aria-describedby="confirmMessage">
+      <section
+        class="modalPanel confirmPanel"
+        aria-describedby="confirmMessage"
+      >
         <div class="confirmHead">
           <div class="confirmMark" aria-hidden="true">!</div>
-          <div><span class="confirmKicker">请确认</span><h2 id="confirmTitle">确认操作</h2></div>
+          <div>
+            <span class="confirmKicker">请确认</span>
+            <h2 id="confirmTitle">确认操作</h2>
+          </div>
         </div>
         <p id="confirmMessage" class="muted"></p>
 
@@ -988,6 +1166,6 @@
       </section>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="js/app.js?v=v1.3.29"></script>
+    <script type="module" src="js/app.js?v=v1.3.30"></script>
   </body>
 </html>

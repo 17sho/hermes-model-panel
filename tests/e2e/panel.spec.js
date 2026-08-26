@@ -5,6 +5,28 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#app")).toBeVisible();
 });
 
+test("中转站测试显示汇总和批量进度", async ({ page }) => {
+  await page.locator('[data-target="testSection"]').click();
+  const overview = page.locator("#testOverview");
+  await expect(overview).toContainText("测试汇总");
+  await expect(page.locator("#testProgressText")).toHaveText("尚未开始");
+  await expect(page.locator("#testTotalCount")).toHaveText("0");
+  await page.locator("#testTarget").selectOption("provider-all:1");
+  await page.locator("#runTestBtn").click();
+  await expect(page.locator("#testProgressText")).toHaveText("已完成", {
+    timeout: 20_000,
+  });
+  await expect(page.locator("#testTotalCount")).not.toHaveText("0");
+  const now = Number(
+    await page.locator("#testProgressTrack").getAttribute("aria-valuenow"),
+  );
+  const max = Number(
+    await page.locator("#testProgressTrack").getAttribute("aria-valuemax"),
+  );
+  expect(now).toBe(max);
+  await expect(page.locator("#testProgressBar")).toHaveCSS("width", /.+/);
+});
+
 test("可删除名称含斜杠的 Hugging Face 模型", async ({ page }) => {
   await page.locator('[data-target="providersSection"]').click();
   const model = page.locator(".modelItem", {

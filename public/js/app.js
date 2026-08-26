@@ -172,6 +172,7 @@ function toggleTestLog(force){const log=$('testLog'); const visible=force===unde
 function appendTestLog(msg,type='run'){const box=$('testLogBody'); if(!box)return; const stick=box.scrollHeight-box.scrollTop-box.clientHeight<24; if(box.querySelector('.muted'))box.innerHTML=''; const row=document.createElement('div'); row.className='logLine '+type; row.innerHTML='<span class="logTime">'+esc(nowTime())+'</span><span>'+esc(msg)+'</span>'; box.appendChild(row); if(stick) box.scrollTop=box.scrollHeight}
 function summarizeResult(r){if(!r)return '没有返回结果'; const status=(r.ok?'可用':'不可用/空回复')+' · HTTP '+(r.http_status??'-')+' · '+(r.latency_ms??'-')+'ms'; return (r.providerIndex||'-')+'号 '+(r.provider_name||'-')+' / '+(r.model||'-')+'：'+status+(r.ok?'':' · '+(r.error||'测试失败'))}
 function resultLogType(r){return r&&r.ok?'ok':'bad'}
+function updateTestOverview({done=0,total=0,ok=0,bad=0,label}={}){const safeTotal=Math.max(0,Number(total)||0);const safeDone=Math.min(safeTotal,Math.max(0,Number(done)||0));const percent=safeTotal?Math.round(safeDone/safeTotal*100):0;const text=$('testProgressText');if(text)text.textContent=label??(safeTotal?(safeDone>=safeTotal?'已完成':`进行中 ${safeDone} / ${safeTotal}`):'尚未开始');const track=$('testProgressTrack');if(track){track.setAttribute('aria-valuemax',String(safeTotal));track.setAttribute('aria-valuenow',String(safeDone))}const bar=$('testProgressBar');if(bar)bar.style.width=percent+'%';if($('testTotalCount'))$('testTotalCount').textContent=String(safeTotal);if($('testOkCount'))$('testOkCount').textContent=String(ok);if($('testBadCount'))$('testBadCount').textContent=String(bad)}
 const REQUEST_LOCKS=new Set();
 const SHARED_GET_REQUESTS=new Map();
 const REQUEST_SEQUENCE=Object.create(null);
@@ -839,16 +840,21 @@ async function runTest(sourceButton){
   else if(target==='current'){body.providerIndex='current';label='当前使用'}
   else if(target.startsWith('agent:')){body.agent=target.split(':')[1];label=agentLabel(body.agent)+' 当前可用'}
   else if(target.startsWith('p:')){const parts=target.split(':');body.providerIndex=Number(parts[1]);body.model=decodeURIComponent(parts.slice(2).join(':'));label=body.providerIndex+'号 / '+body.model;}
+  const expectedTotal=target==='all'?(store.state.providers||[]).length:1;
   $('testResults').innerHTML='<div class="muted">测试中，请稍等...</div>';
+  updateTestOverview({done:0,total:expectedTotal,label:`测试中 0 / ${expectedTotal}`});
   appendTestLog('开始检测：'+label+' · '+(body.test_mode==='hermes_stream'?'Hermes 流式工具调用':'普通回复'),'run');
   try{
     const r=await api('/test',{method:'POST',body:JSON.stringify(body),sourceButton});
     const results=r.results||[];
+    const ok=results.filter(one=>one.ok).length;
+    updateTestOverview({done:results.length,total:results.length,ok,bad:results.length-ok,label:'已完成'});
     renderTestResults(results);
     results.forEach(one=>appendTestLog(summarizeResult(one),resultLogType(one)));
     appendTestLog('检测完成：共 '+results.length+' 项','ok');
     toast('测试完成')
   }catch(e){
+    updateTestOverview({done:expectedTotal,total:expectedTotal,bad:expectedTotal,label:'测试失败'});
     $('testResults').innerHTML='<div class="err">'+esc(e.message)+'</div>';
     appendTestLog('检测失败：'+e.message,'bad');
     toast(e.message)
@@ -858,15 +864,18 @@ async function testAgentCurrent(agent){
   const box=$('agent_test_'+agent);
   const label=agentLabel(agent)+' 当前模型';
   appendTestLog('开始检测：'+label,'run');
+  updateTestOverview({done:0,total:1,label:'测试中 0 / 1'});
   if(box) box.innerHTML='<div class="muted">正在测试当前模型...</div>';
   try{
     const r=await api('/test',{method:'POST',body:JSON.stringify({agent,message:$('testMessage')?.value||'你好，请用一句话回复：测试成功',test_mode:$('testMode')?.value||'basic'})});
     const html=(r.results||[]).map(oneResultHtml).join('') || '<div class="err">没有返回结果</div>';
     if(box) box.innerHTML='<div class="results">'+html+'</div>';
+    const agentResults=r.results||[];const agentOk=agentResults.filter(one=>one.ok).length;updateTestOverview({done:1,total:1,ok:agentOk,bad:agentOk?0:1,label:'已完成'});
     (r.results||[]).forEach(one=>appendTestLog(summarizeResult(one),resultLogType(one)));
     appendTestLog('检测完成：'+label,'ok');
     toast('测试完成：'+agentLabel(agent));
   }catch(e){
+    updateTestOverview({done:1,total:1,bad:1,label:'测试失败'});
     if(box) box.innerHTML='<div class="err">'+esc(e.message)+'</div>';
     appendTestLog('检测失败：'+label+' · '+e.message,'bad');
     toast(e.message);
@@ -888,6 +897,7 @@ async function testProviderAllModels(providerIndex, fromTop=false){
   models.forEach(m=>{const box=$(resultId(providerIndex,m)); if(box) box.innerHTML='<div class="muted">等待批量测试...</div>';});
   const results=[];
   let ok=0, bad=0;
+  updateTestOverview({done:0,total:models.length,label:`进行中 0 / ${models.length}`});
   for(let i=0;i<models.length;i++){
     const m=models[i];
     const box=$(resultId(providerIndex,m));
@@ -905,7 +915,9 @@ async function testProviderAllModels(providerIndex, fromTop=false){
       if(box) box.innerHTML='<div class="err">'+esc(e.message)+'</div>';
     }
     if(fromTop) renderTestResults(results);
+    updateTestOverview({done:i+1,total:models.length,ok,bad,label:`进行中 ${i+1} / ${models.length}`});
   }
+  updateTestOverview({done:models.length,total:models.length,ok,bad,label:'已完成'});
   appendTestLog('批量检测完成：'+p.name+' · 可用 '+ok+' / 失败 '+bad+' / 总计 '+models.length, bad?'warn':'ok');
   toast('已测试 '+models.length+' 个模型');
   }finally{setBatchTestLock(false)}
@@ -914,15 +926,18 @@ async function testOneModel(providerIndex, model){
   if(BATCH_TEST_ACTIVE){toast('批量测试正在进行');return}
   const box=$(resultId(providerIndex, model));
   appendTestLog('开始检测：'+providerIndex+'号 / '+model,'run');
+  updateTestOverview({done:0,total:1,label:'测试中 0 / 1'});
   if(box) box.innerHTML='<div class="muted">正在测试 '+esc(model)+' ...</div>';
   try{
     const r=await api('/test',{method:'POST',body:JSON.stringify({providerIndex,model,message:$('testMessage').value||'你好，请用一句话回复：测试成功',test_mode:$('testMode')?.value||'basic'})});
     const html=(r.results||[]).map(oneResultHtml).join('') || '<div class="err">没有返回结果</div>';
     if(box) box.innerHTML='<div class="results">'+html+'</div>';
+    const agentResults=r.results||[];const agentOk=agentResults.filter(one=>one.ok).length;updateTestOverview({done:1,total:1,ok:agentOk,bad:agentOk?0:1,label:'已完成'});
     (r.results||[]).forEach(one=>appendTestLog(summarizeResult(one),resultLogType(one)));
     appendTestLog('检测完成：'+providerIndex+'号 / '+model,'ok');
     toast('测试完成：'+model);
   }catch(e){
+    updateTestOverview({done:1,total:1,bad:1,label:'测试失败'});
     if(box) box.innerHTML='<div class="err">'+esc(e.message)+'</div>';
     appendTestLog('检测失败：'+providerIndex+'号 / '+model+' · '+e.message,'bad');
     toast(e.message);
