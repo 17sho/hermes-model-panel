@@ -85,13 +85,16 @@ function validGithubRepo(value) {
 }
 
 async function readInstalledPanelSha() {
-  try {
-    const value = (await fs.readFile(PANEL_VERSION_FILE, 'utf8')).trim();
-    if (/^[0-9a-f]{40}$/.test(value)) return value;
-  } catch { /* pre-updater installs have no marker */ }
+  // Development/git deployments can retain an old .panel-version marker from a
+  // previous archive install. Prefer the live checkout's HEAD when available;
+  // packaged installs have no .git directory and fall back to the marker.
   try {
     const { stdout = '' } = await execFileAsync('git', ['-C', process.cwd(), 'rev-parse', 'HEAD'], { timeout: 3000 });
     const value = stdout.trim();
+    if (/^[0-9a-f]{40}$/.test(value)) return value;
+  } catch { /* release archive installs are not git checkouts */ }
+  try {
+    const value = (await fs.readFile(PANEL_VERSION_FILE, 'utf8')).trim();
     return /^[0-9a-f]{40}$/.test(value) ? value : '';
   } catch { return ''; }
 }
