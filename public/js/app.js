@@ -201,7 +201,10 @@ async function api(path,opts={}){
     const headers={'Content-Type':'application/json',...(store.csrfToken&&method!=='GET'?{'X-CSRF-Token':store.csrfToken}:{}),...(fetchOpts.headers||{})};
     const r=await fetch(API_BASE+path,{credentials:'same-origin',...fetchOpts,headers,signal:controller.signal});
     const type=String(r.headers.get('content-type')||'').toLowerCase();
-    if(!type.includes('application/json'))throw new Error('服务器返回了非 JSON 响应（HTTP '+r.status+'）');
+    if(!type.includes('application/json')){
+      if(path==='/panel-update')throw new Error(r.status>=500?'版本检查服务暂时不可用，请稍后重试':'版本检查返回异常，请稍后重试');
+      throw new Error('服务器返回了非 JSON 响应（HTTP '+r.status+'）');
+    }
     const j=await r.json();
     if(r.status===401){if(path!=='/login')invalidateClientSession();const e=new Error(path==='/login'?(j.error||'密码错误'):'NEED_LOGIN');e.code=path==='/login'?'LOGIN_FAILED':'NEED_LOGIN';throw e}
     if(!r.ok||j.ok===false)throw new Error(j.error||('HTTP '+r.status));

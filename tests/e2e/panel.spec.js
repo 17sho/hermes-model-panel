@@ -68,6 +68,23 @@ test("14 页导航保留 SVG，移动菜单可重复开关", async ({ page }) =>
   }
 });
 
+test("版本检查遇到 Cloudflare HTML 502 时显示友好提示", async ({ page }) => {
+  await page.route("**/api/panel-update", (route) =>
+    route.fulfill({
+      status: 502,
+      contentType: "text/html",
+      body: "<html>Cloudflare</html>",
+    }),
+  );
+  await page.goto("/");
+  await page.locator("#versionBadgeBtn").click();
+  await page.locator("#versionActionBtn").click();
+  await expect(page.locator("#versionPopoverHint")).toContainText(
+    "版本检查服务暂时不可用，请稍后重试",
+  );
+  await expect(page.locator("body")).not.toContainText("非 JSON 响应");
+});
+
 test("侧栏版本入口可检查更新并展示回滚版本", async ({ page }) => {
   await page.route("**/api/panel-update", async (route) => {
     await route.fulfill({

@@ -2694,7 +2694,10 @@ router.get('/panel-update', async (ctx) => {
       rollbacks,
     };
   } catch (e) {
-    ctx.status = 502;
+    // Keep the updater's error response at HTTP 200 so Cloudflare does not
+    // replace the structured JSON body with its branded HTML 502 page.
+    ctx.status = 200;
+    ctx.set('Cache-Control', 'no-store');
     ctx.body = { ok: false, error: publicError(e, '版本检查失败') };
   }
 });
