@@ -344,10 +344,17 @@ function fillCloneFrom(){
 }
 let USAGE_LOADED=false;
 function fmtNum(n){return Number(n||0).toLocaleString('zh-CN')}
+function fmtUsage(n,unit='tokens'){
+ const value=Number(n||0),abs=Math.abs(value);
+ let shown=fmtNum(value);
+ if(abs>=100000000)shown=(value/100000000).toLocaleString('zh-CN',{maximumFractionDigits:2})+' 亿';
+ else if(abs>=10000)shown=(value/10000).toLocaleString('zh-CN',{maximumFractionDigits:2})+' 万';
+ return `${shown} ${unit}`;
+}
 function hasMoney(b){return Number(b?.actual_cost||0)>0 || Number(b?.estimated_cost||0)>0}
 function fmtMoney(n){return '$'+Number(n||0).toFixed(4)}
 function moneyLine(b){return hasMoney(b)?`费用：预估 ${fmtMoney(b.estimated_cost)} / 实际 ${fmtMoney(b.actual_cost)}`:'费用未记录：当前自定义中转站没有 Hermes 价格表或实际扣费回传'}
-function usageBox(label, b){return `<div class="usageMini"><div class="k">${label}</div><div class="num">${fmtNum(b.total_tokens)}</div><div class="sub">输入 ${fmtNum(b.input_tokens)} / 输出 ${fmtNum(b.output_tokens)} · 调用 ${fmtNum(b.api_calls)}</div><div class="sub">会话 ${fmtNum(b.sessions)} · ${moneyLine(b)}</div></div>`}
+function usageBox(label, b){return `<div class="usageMini"><div class="k">${label}</div><div class="num" title="${fmtNum(b.total_tokens)} tokens">${fmtUsage(b.total_tokens)}</div><div class="sub">输入 ${fmtUsage(b.input_tokens)} / 输出 ${fmtUsage(b.output_tokens)} · 调用 ${fmtUsage(b.api_calls,'次')}</div><div class="sub">会话 ${fmtUsage(b.sessions,'个')} · ${moneyLine(b)}</div></div>`}
 function shortUrl(u){try{const x=new URL(u);return x.host+x.pathname.replace(/\/$/,'')}catch{return u||''}}
 async function toggleUsage(){
   const box=$('usage'); const btn=$('usageToggleBtn'); if(!box) return;
@@ -365,8 +372,8 @@ async function loadUsage(){
     USAGE_LOADED=true;
     const moneyNote=hasMoney(u.total)?'已记录费用':'费用未记录';
     $('usageSource').textContent='Hermes 对话 · '+moneyNote+' · '+(u.total.last_at_iso||'暂无记录');
-    const providers=(u.by_provider||[]).map(p=>`<div class="usageModelRow"><div><b>${esc(p.provider||'-')}</b><div class="sub">${esc(shortUrl(p.base_url))}</div><div class="sub">调用 ${fmtNum(p.api_calls)} · 输入 ${fmtNum(p.input_tokens)} / 输出 ${fmtNum(p.output_tokens)}</div><div class="sub">${moneyLine(p)}</div></div><div class="v">${fmtNum(p.total_tokens)}</div></div>`).join('') || '<div class="muted">暂无中转站统计</div>';
-    const models=(u.by_model||[]).map(m=>`<div class="usageModelRow"><div><b>${esc(m.model||'-')}</b><div class="sub">${esc(m.provider||'-')} · ${esc(shortUrl(m.base_url))}</div><div class="sub">调用 ${fmtNum(m.api_calls)} · 输入 ${fmtNum(m.input_tokens)} / 输出 ${fmtNum(m.output_tokens)}</div><div class="sub">${moneyLine(m)}</div></div><div class="v">${fmtNum(m.total_tokens)}</div></div>`).join('') || '<div class="muted">暂无模型统计</div>';
+    const providers=(u.by_provider||[]).map(p=>`<div class="usageModelRow"><div><b>${esc(p.provider||'-')}</b><div class="sub">${esc(shortUrl(p.base_url))}</div><div class="sub">调用 ${fmtUsage(p.api_calls,'次')} · 输入 ${fmtUsage(p.input_tokens)} / 输出 ${fmtUsage(p.output_tokens)}</div><div class="sub">${moneyLine(p)}</div></div><div class="v" title="${fmtNum(p.total_tokens)} tokens">${fmtUsage(p.total_tokens)}</div></div>`).join('') || '<div class="muted">暂无中转站统计</div>';
+    const models=(u.by_model||[]).map(m=>`<div class="usageModelRow"><div><b>${esc(m.model||'-')}</b><div class="sub">${esc(m.provider||'-')} · ${esc(shortUrl(m.base_url))}</div><div class="sub">调用 ${fmtUsage(m.api_calls,'次')} · 输入 ${fmtUsage(m.input_tokens)} / 输出 ${fmtUsage(m.output_tokens)}</div><div class="sub">${moneyLine(m)}</div></div><div class="v" title="${fmtNum(m.total_tokens)} tokens">${fmtUsage(m.total_tokens)}</div></div>`).join('') || '<div class="muted">暂无模型统计</div>';
     box.innerHTML=usageBox('最近 24 小时',u.last_24h||{})+usageBox('最近 7 天',u.last_7d||{})+usageBox('累计全部',u.total||{})+`<div class="usageModels"><div class="k">最近 7 天按中转站</div>${providers}</div><div class="usageModels"><div class="k">最近 7 天按模型</div>${models}</div>`;
   }catch(e){
     $('usageSource').textContent='读取失败';
