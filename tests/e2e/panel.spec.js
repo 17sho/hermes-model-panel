@@ -5,6 +5,27 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#app")).toBeVisible();
 });
 
+test("可删除名称含斜杠的 Hugging Face 模型", async ({ page }) => {
+  await page.locator('[data-target="providersSection"]').click();
+  const model = page.locator('.modelItem', {
+    hasText: 'deepseek-ai/DeepSeek-V3',
+  });
+  await expect(model).toBeVisible();
+  const requestPromise = page.waitForRequest(
+    (request) =>
+      request.method() === 'DELETE' &&
+      request.url().endsWith(
+        '/api/providers/1/models/deepseek-ai%2FDeepSeek-V3',
+      ),
+  );
+  await model.locator('[data-action="delete-model"]').click();
+  await page.locator('[data-static-click="69"]').click();
+  const request = await requestPromise;
+  expect(request.url()).toContain('deepseek-ai%2FDeepSeek-V3');
+  await expect(model).toHaveCount(0);
+  await expect(page.locator('#toast')).toContainText('已删除模型');
+});
+
 test("完整编辑中转站且 API Key 默认隐藏、可切换显示", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator("#mobileMenuBtn").click();
@@ -52,6 +73,20 @@ test("完整编辑中转站且 API Key 默认隐藏、可切换显示", async ({
   const modelBox = await models.boundingBox();
   const actionBox = await actions.boundingBox();
   expect(modelBox.y + modelBox.height).toBeLessThanOrEqual(actionBox.y);
+});
+
+test("手机端编辑中转站关闭时不等待禁用的动画", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#mobileMenuBtn").click();
+  await page.locator('[data-target="providersSection"]').click();
+  await page.locator('[data-action="edit-provider"]').click();
+  const modal = page.locator("#providerEditModal");
+  await expect(modal).toBeVisible();
+  const hiddenSynchronously = await page.evaluate(() => {
+    document.querySelector('#providerEditModal .modalHead > button').click();
+    return document.querySelector('#providerEditModal').classList.contains('hidden');
+  });
+  expect(hiddenSynchronously).toBe(true);
 });
 
 test("14 页导航保留 SVG，移动菜单可重复开关", async ({ page }) => {
@@ -249,11 +284,15 @@ test("弹窗退出不会被子元素动画提前结束", async ({ page }) => {
   const modal = page.locator("#commandsModal");
   await expect(modal).toBeVisible();
   await page.keyboard.press("Escape");
-  await modal.locator(".modalHead").dispatchEvent("animationend", {
-    animationName: "spin",
+  const ignoredChildAnimation = await modal.evaluate((element) => {
+    const event = new window.AnimationEvent('animationend', {
+      animationName: 'spin',
+      bubbles: true,
+    });
+    element.querySelector('.modalHead').dispatchEvent(event);
+    return !element.classList.contains('hidden');
   });
-  await page.waitForTimeout(60);
-  await expect(modal).not.toHaveClass(/hidden/);
+  expect(ignoredChildAnimation).toBe(true);
   await expect(modal).toHaveClass(/hidden/, { timeout: 600 });
 });
 

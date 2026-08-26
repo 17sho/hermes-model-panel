@@ -4,11 +4,12 @@ import path from 'node:path';
 
 const root = path.resolve(new URL('../..', import.meta.url).pathname);
 const malicious = `x" onclick="globalThis.pwned=1`;
+const slashModel = 'deepseek-ai/DeepSeek-V3';
 const state = {
   ok: true,
   agents: [{ id: 'default', name: 'Agent1', profile: 'agent1', current: { model: 'fixture-model', provider: 'custom', base_url: 'https://fixture.invalid/v1' } }],
   current: { model: 'fixture-model', provider: 'custom', base_url: 'https://fixture.invalid/v1' },
-  providers: [{ id: 1, name: malicious, slug: 'custom:fixture', base_url: 'https://fixture.invalid/v1', api_mode: 'chat_completions', model: malicious, models: [malicious], api_key_redacted: '***' }],
+  providers: [{ id: 1, name: malicious, slug: 'custom:fixture', base_url: 'https://fixture.invalid/v1', api_mode: 'chat_completions', model: malicious, models: [malicious, slashModel], api_key_redacted: '***' }],
   commands: [{ command: '/model', description: '模型', target: 'default' }], image_models: [],
 };
 const statuses = [{ agent: 'default', profile: 'agent1', name: 'Agent1', status: 'active', ok: true, platforms: {}, busy_targets: [], active_agents: 0 }];
@@ -17,6 +18,11 @@ const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, 'http://127.0.0.1');
   if (url.pathname.startsWith('/api/')) {
     response.setHeader('content-type', 'application/json; charset=utf-8');
+    if (request.method === 'DELETE' && url.pathname === `/api/providers/1/models/${encodeURIComponent(slashModel)}`) {
+      state.providers[0].models = state.providers[0].models.filter((model) => model !== slashModel);
+      response.end(JSON.stringify({ ok: true, state }));
+      return;
+    }
     if (!['GET', 'HEAD'].includes(request.method)) {
       response.statusCode = 405;
       response.end(JSON.stringify({ ok: false, error: 'fixture 禁止写操作' }));

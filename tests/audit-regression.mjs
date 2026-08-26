@@ -32,7 +32,8 @@ assert.ok(!legacyStaticIds.some((id) => id.includes('${')), '动态模板 ID 不
 const legacyScript = legacyHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1] || '';
 const apiPaths = new Set([...script.matchAll(/api\((['`])([^'`]+)\1/g)].map((match) => match[2]));
 const legacyApiPaths = new Set([...legacyScript.matchAll(/api\((['`])([^'`]+)\1/g)].map((match) => match[2]));
-assert.deepEqual([...legacyApiPaths].filter((apiPath) => !apiPaths.has(apiPath)), [], '前端 API 路径零缺失');
+const normalizeApiPath = (apiPath) => apiPath.replace(/\$\{encodeURIComponent\(([^)]+)\)\}/g, '${$1}');
+assert.deepEqual([...legacyApiPaths].filter((apiPath) => ![...apiPaths].some((currentPath) => normalizeApiPath(currentPath) === apiPath)), [], '前端 API 路径零缺失');
 
 // Execute the real attribute encoder with a malicious dynamic value. The
 // resulting markup must retain one data attribute and create no event handler.
