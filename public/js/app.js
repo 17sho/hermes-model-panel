@@ -566,8 +566,8 @@ function renderSessionResume(){
   box.innerHTML=`<div class="workSess">${rows.map(s=>{
     const who=[s.platform_label||s.platform,s.name].filter(Boolean).join(' · ');
     const tag=s.current?'当前':(s.open?'未结束':'已结束');
-    const modelOpts=['<option value="">选择下一条使用的模型</option>'].concat(choices.map(m=>`<option value="${escAttr(m)}">${esc(m)}</option>`)).join('');
-    return `<div class="workSessItem ${s.current?'cur':''}"><div class="workSessTop"><b>${esc(s.title||who||s.id)}</b><span class="sessTag ${s.current?'cur':''}">${esc(tag)}</span></div><div class="workSessMeta">${esc(who||'未知来源')}${s.when?(' · '+esc(s.when)):''}${s.model?(' · '+esc(s.model)):''}${s.message_count?(' · '+s.message_count+' 条消息'):''}</div><div class="workSessActs"><button class="small" type="button" ${s.current?'disabled':''} data-action="resume-session" data-agent="${escAttr(store.sessionMeta.agent)}" data-session="${escAttr(s.id)}">切回这条</button><select aria-label="选择这条上下文下一次使用的模型" data-action="session-model" data-agent="${escAttr(store.sessionMeta.agent)}" data-session-key="${escAttr(s.session_key)}">${modelOpts}</select><button class="small danger" type="button" data-action="delete-session" data-agent="${escAttr(store.sessionMeta.agent)}" data-session="${escAttr(s.id)}">删除</button></div></div>`;
+    const modelOpts=['<option value="" disabled selected>为下一条消息选择模型</option>'].concat(choices.map(m=>`<option value="${escAttr(m)}">${esc(m)}</option>`)).join('');
+    return `<div class="workSessItem ${s.current?'cur':''}"><div class="workSessTop"><b>${esc(s.title||who||s.id)}</b><span class="sessTag ${s.current?'cur':''}">${esc(tag)}</span></div><div class="workSessMeta">${esc(who||'未知来源')}${s.when?(' · '+esc(s.when)):''}${s.model?(' · '+esc(s.model)):''}${s.message_count?(' · '+s.message_count+' 条消息'):''}</div><div class="workSessActs"><button class="small" type="button" ${s.current?'disabled':''} data-action="resume-session" data-agent="${escAttr(store.sessionMeta.agent)}" data-session="${escAttr(s.id)}">切回这条</button><select class="sessionModelSelect is-placeholder" aria-label="选择这条上下文下一次使用的模型" data-action="session-model" data-agent="${escAttr(store.sessionMeta.agent)}" data-session-key="${escAttr(s.session_key)}">${modelOpts}</select><button class="small danger" type="button" data-action="delete-session" data-agent="${escAttr(store.sessionMeta.agent)}" data-session="${escAttr(s.id)}">删除</button></div></div>`;
   }).join('')}</div>`;
   renderSessionPager();
 }
@@ -1070,5 +1070,5 @@ const DYNAMIC_ACTIONS={
  'toggle-skills-cat':b=>toggleSkillsCat(b.dataset.key),'save-skills':b=>saveAgentSkills(b.dataset.agent),'toggle-skills-agent':b=>toggleSkillsAgent(b.dataset.key)
 };
 document.addEventListener('click',event=>{const b=event.target.closest('[data-action]');if(!b||b.disabled)return;const fn=DYNAMIC_ACTIONS[b.dataset.action];if(fn){event.preventDefault();Promise.resolve().then(()=>fn(b)).catch(error=>{console.error(error);toast(error?.message||'操作失败，请稍后重试')})}});
-document.addEventListener('change',e=>{const el=e.target.closest('select[data-action="session-model"]');if(el?.value)setSessionModel(el.dataset.agent,el.dataset.sessionKey,el.value,el)});
+document.addEventListener('change',e=>{const el=e.target.closest('select[data-action="session-model"]');if(el?.value){el.classList.remove('is-placeholder');setSessionModel(el.dataset.agent,el.dataset.sessionKey,el.value,el)}});
 loadState();

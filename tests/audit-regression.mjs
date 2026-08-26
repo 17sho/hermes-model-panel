@@ -13,7 +13,11 @@ const root = path.resolve(new URL('..', import.meta.url).pathname);
 const execFileAsync = promisify(execFile);
 const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
 const script = fs.readFileSync(path.join(root, 'public/js/app.js'), 'utf8');
+const styles = fs.readFileSync(path.join(root, 'public/css/app.css'), 'utf8');
 assert.ok(script, '页面脚本存在');
+assert.match(script, /<option value="" disabled selected>为下一条消息选择模型<\/option>/, '会话模型选择框使用明确的占位选项');
+assert.match(script, /sessionModelSelect is-placeholder/, '会话模型选择框区分占位状态');
+assert.match(styles, /\.sessionModelSelect\.is-placeholder\{color:var\(--muted\)\}/, '会话模型占位文字使用次要颜色');
 new vm.Script(script, { filename: 'public/index.html' });
 
 // Only the trusted HTML shell contributes to the legacy DOM contract. IDs in
