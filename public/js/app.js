@@ -87,6 +87,8 @@ const STATIC_EVENT_HANDLERS = {
   70: function(event){toggleTheme()},
   71: function(event){checkPanelUpdate(this)},
   72: function(event){runPanelUpdate(this)},
+  76: function(event){closeProviderEdit()},
+  77: function(event){saveProviderEdit(this)},
 };
 function installStaticEventHandlers(){
   for(const type of ['click','change','input','keydown','submit']){
@@ -769,10 +771,12 @@ async function serviceStatus(){const seq=nextRequestSequence('serviceStatus');co
 async function confirmPrivateAccess(){return askConfirm('确定允许这个中转站访问内网？\n\n它将能访问 10.x、172.16–31.x、192.168.x、CGNAT 和 IPv6 ULA。云元数据、链路本地和组播地址仍会阻止。')}
 async function editProvider(id){
   const p=(store.state.providers||[]).find(x=>Number(x.id)===Number(id));if(!p)return toast('中转站不存在');
-  const next=await askChoice({title:'编辑中转站',message:`${p.id}号：${p.name}`,label:'网络访问范围',value:p.allow_private_network?'private':'public',options:[['public','仅公网和本机（推荐）'],['private','允许访问普通内网']],confirmText:'保存'});if(next==null)return;
-  const allowed=next==='private';if(allowed&&!p.allow_private_network&&!await confirmPrivateAccess())return;
-  try{const r=await api(`/providers/${id}/private-access`,{method:'PUT',body:JSON.stringify({allowed})});store.state=r.state;renderProviders(store.state.providers);toast('中转站设置已保存')}catch(e){toast(e.message)}
+  $('editProviderId').value=p.id;$('editName').value=p.name||'';$('editUrl').value=p.base_url||'';$('editMode').value=p.api_mode||'chat_completions';$('editKey').value='';setSecretVisibility($('editKey'),false);$('editModel').value=p.model||'';$('editModels').value=(p.models||[]).filter(x=>x!==p.model).join('\n');$('editNetworkScope').value=p.allow_private_network?'private':'public';$('providerEditTitle').textContent=`编辑中转站 · ${p.id}号`;openModal('providerEditModal','editName');
 }
+function closeProviderEdit(){closeModal('providerEditModal')}
+async function saveProviderEdit(sourceButton){const id=Number($('editProviderId').value);const old=(store.state.providers||[]).find(x=>Number(x.id)===id);if(!old)return toast('中转站不存在');const allowPrivate=$('editNetworkScope').value==='private';if(allowPrivate&&!old.allow_private_network&&!await confirmPrivateAccess())return;const body={name:$('editName').value,base_url:$('editUrl').value,api_key:$('editKey').value,api_mode:$('editMode').value,model:$('editModel').value,models:$('editModels').value,allow_private_network:allowPrivate};try{const r=await api(`/providers/${id}`,{method:'PUT',body:JSON.stringify(body),sourceButton});store.state=r.state;renderCurrent(store.state.current);renderProviders(store.state.providers);renderTestTargets(store.state.providers);closeProviderEdit();toast('中转站已更新')}catch(e){toast(e.message)}}
+function setSecretVisibility(input,visible){if(!input)return;input.type=visible?'text':'password';const btn=document.querySelector(`.secretToggle[data-secret-target="${input.id}"]`);if(btn){btn.textContent=visible?'隐藏':'显示';btn.setAttribute('aria-label',(visible?'隐藏':'显示')+' API Key');btn.setAttribute('aria-pressed',String(visible))}}
+document.addEventListener('click',event=>{const btn=event.target.closest('.secretToggle[data-secret-target]');if(!btn)return;event.preventDefault();const input=$(btn.dataset.secretTarget);setSecretVisibility(input,input?.type==='password');input?.focus()});
 async function addProvider(){try{const allowPrivate=$('addNetworkScope').value==='private';if(allowPrivate&&!await confirmPrivateAccess())return;const body={name:$('addName').value,base_url:$('addUrl').value,api_key:$('addKey').value,api_mode:$('addMode').value,model:$('addModel').value,models:$('addModels').value,allow_private_network:allowPrivate};const r=await api('/providers',{method:'POST',body:JSON.stringify(body)});store.state=r.state;renderCurrent(store.state.current);renderProviders(store.state.providers);renderCommands(store.state.commands);renderTestTargets(store.state.providers);toast('已添加中转站')}catch(e){toast(e.message)}}
 async function fetchModelsForAdd(sourceButton){
   const btn=sourceButton||null;

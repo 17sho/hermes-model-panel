@@ -1426,19 +1426,31 @@ router.post('/providers', async (ctx) => {
 router.put('/providers/:idx', async (ctx) => {
   try {
     const idx = Number(ctx.params.idx) - 1;
-    const { cfg, backup, value: p } = await updateConfig((cfg) => {
+    const { cfg, backup, value: meta } = await updateConfig((cfg) => {
       const providers = Array.isArray(cfg.custom_providers) ? cfg.custom_providers : [];
       if (!providers[idx]) throw new Error('中转站不存在');
       const old = providers[idx];
+      const wasCurrent = providerMatchesCurrent(old, idx, cfg.model || {});
       const p = ensureProviderFields({ ...ctx.request.body, api_key: ctx.request.body?.api_key || old.api_key }, false);
       p.provider_key = old.provider_key || stableProviderKey(old, idx) || stableProviderKey(p, idx);
       if (old.name && slugName(old.name) === p.provider_key) p.display_name = p.name;
       providers[idx] = canonicalizeProviderForConfig(p, idx);
       migrateProviderKeys(cfg);
+      if (wasCurrent) {
+        const saved = providers[idx];
+        const norm = normalizeProvider(saved, idx);
+        cfg.model = { ...(cfg.model || {}), provider: norm.slug, provider_slug: norm.slug, provider_name: norm.name, base_url: saved.base_url, api_key: saved.api_key, api_mode: saved.api_mode, model: saved.model || norm.model };
+      }
       rebuildQuickCommands(cfg);
-      return p;
+      return { provider: p, allowed: p.allow_private_network };
     });
-    await rememberProviderMeta(p, idx);
+    try {
+      await rememberProviderMeta(meta.provider, idx);
+      await rememberProviderPrivateAccess(meta.provider, idx, meta.allowed);
+    } catch {
+      await restoreConfigBackup(HERMES_CONFIG, backup);
+      throw new Error('中转站元数据保存失败，配置已回滚');
+    }
     ctx.body = { ok: true, backup: publicBackupId(backup), state: await publicState(cfg) };
   } catch (e) {
     ctx.status = 400;

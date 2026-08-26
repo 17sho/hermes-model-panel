@@ -22,7 +22,7 @@
           : "#f4f6f8";
       } catch {}
     </script>
-    <link rel="stylesheet" href="css/app.css?v=v1.3.15" />
+    <link rel="stylesheet" href="css/app.css?v=v1.3.16" />
   </head>
   <body>
     <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -30,7 +30,7 @@
         <header class="loginHead">
           <div class="loginMark" aria-hidden="true">◆</div>
           <div class="loginBrand">
-            <span>HERMES PANEL · v1.3.15</span>
+            <span>HERMES PANEL · v1.3.16</span>
             <h1 id="loginTitle">登录模型台</h1>
           </div>
         </header>
@@ -85,7 +85,7 @@
             >
               <span class="versionBadgeCopy">
                 <small>控制台版本</small>
-                <strong id="sidePanelVersion">v1.3.15</strong>
+                <strong id="sidePanelVersion">v1.3.16</strong>
                 <em id="versionBadgeState">检查中</em>
               </span>
               <span class="versionChevron" aria-hidden="true">⌄</span>
@@ -99,7 +99,7 @@
               <div class="versionCurrentRow">
                 <span>
                   <small>当前运行</small>
-                  <b id="versionPopoverNumber">v1.3.15</b>
+                  <b id="versionPopoverNumber">v1.3.16</b>
                   <code id="versionCurrentSha">--------</code>
                 </span>
                 <span id="versionStatusMark" class="versionStateChip"
@@ -453,12 +453,12 @@
               <input
                 id="addUrl"
                 placeholder="Base URL，例如 https://api.example.com/v1"
-              /><input
+              /><div class="secretField"><input
                 id="addKey"
                 type="password"
                 autocomplete="new-password"
                 placeholder="API Key（不会明文展示）"
-              />
+              /><button type="button" class="secretToggle" data-secret-target="addKey" aria-label="显示 API Key" aria-pressed="false">显示</button></div>
               <div class="row">
                 <input id="addModel" placeholder="默认模型" /><button
                   id="fetchAddModelsBtn"
@@ -858,6 +858,22 @@
         </div>
       </div>
     </main>
+    <div id="providerEditModal" class="modal hidden" aria-hidden="true">
+      <div class="modalBackdrop" data-static-click="76"></div>
+      <section class="modalPanel providerEditPanel" role="dialog" aria-modal="true" aria-labelledby="providerEditTitle">
+        <header class="modalHead"><div><span class="sectionKicker">PROVIDER</span><h2 id="providerEditTitle">编辑中转站</h2><p class="muted">修改地址、接口、模型和访问范围。</p></div><button type="button" class="ghost" data-static-click="76">关闭</button></header>
+        <div class="form providerEditForm">
+          <input id="editProviderId" type="hidden" />
+          <div class="row"><label><span class="k">名称</span><input id="editName" /></label><label><span class="k">API 格式</span><select id="editMode"><option value="chat_completions">OpenAI API（/v1/chat/completions）</option><option value="anthropic_messages">Claude API（/v1/messages）</option><option value="responses">OpenAI Responses（/v1/responses）</option><option value="codex_responses">Codex Responses（/v1/responses）</option></select></label></div>
+          <label><span class="k">Base URL</span><input id="editUrl" inputmode="url" /></label>
+          <label><span class="k">API Key</span><div class="secretField"><input id="editKey" type="password" autocomplete="new-password" placeholder="留空则保留当前 API Key" /><button type="button" class="secretToggle" data-secret-target="editKey" aria-label="显示 API Key" aria-pressed="false">显示</button></div><small class="fieldHint">为安全起见，不回显已保存的 Key；只有输入新值才会替换。</small></label>
+          <label><span class="k">默认模型</span><input id="editModel" /></label>
+          <label><span class="k">其它模型</span><textarea id="editModels" placeholder="每行一个，可选"></textarea></label>
+          <details class="providerAdvanced"><summary>高级设置</summary><div class="providerAdvancedBody"><label for="editNetworkScope">网络访问范围</label><select id="editNetworkScope"><option value="public">仅公网和本机（推荐）</option><option value="private">允许访问普通内网</option></select><small>云元数据、链路本地和组播地址始终禁止。</small></div></details>
+          <div class="providerEditActions"><button type="button" data-static-click="76">取消</button><button id="saveProviderEditBtn" type="button" class="primary" data-static-click="77">保存修改</button></div>
+        </div>
+      </section>
+    </div>
     <div id="mimoModal" class="modal hidden">
       <div class="modalBackdrop" data-static-click="61"></div>
       <section
@@ -975,6 +991,6 @@
       </section>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="js/app.js?v=v1.3.15"></script>
+    <script type="module" src="js/app.js?v=v1.3.16"></script>
   </body>
 </html>

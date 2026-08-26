@@ -5,6 +5,30 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#app")).toBeVisible();
 });
 
+test("完整编辑中转站且 API Key 默认隐藏、可切换显示", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#mobileMenuBtn").click();
+  await page.locator('[data-target="providersSection"]').click();
+  await page.locator('[data-action="edit-provider"]').click();
+  const modal = page.locator("#providerEditModal");
+  const key = page.locator("#editKey");
+  await expect(modal).toBeVisible();
+  await expect(page.locator("#editName")).toHaveValue(/onclick/);
+  await expect(page.locator("#editUrl")).toHaveValue("https://fixture.invalid/v1");
+  await expect(page.locator("#editMode")).toHaveValue("chat_completions");
+  await expect(page.locator("#editModel")).toHaveValue(/onclick/);
+  await expect(key).toHaveValue("");
+  await expect(key).toHaveAttribute("type", "password");
+  await page.locator('[data-secret-target="editKey"]').click();
+  await expect(key).toHaveAttribute("type", "text");
+  await expect(page.locator('[data-secret-target="editKey"]')).toHaveText("隐藏");
+  await page.locator('[data-secret-target="editKey"]').click();
+  await expect(key).toHaveAttribute("type", "password");
+  const box = await modal.locator(".providerEditPanel").boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+});
+
 test("14 页导航保留 SVG，移动菜单可重复开关", async ({ page }) => {
   const nav = page.locator(".sideNav button[data-target]");
   await expect(nav).toHaveCount(14);
