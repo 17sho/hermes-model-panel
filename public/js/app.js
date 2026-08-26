@@ -912,7 +912,7 @@ async function testProviderAllModels(providerIndex, fromTop=false){
     appendTestLog('['+(i+1)+'/'+models.length+'] 正在检测 '+m,'run');
     if(box) box.innerHTML='<div class="muted">正在测试 '+esc(m)+' ...</div>';
     try{
-      const r=await api('/test',{method:'POST',body:JSON.stringify({providerIndex,model:m,message:$('testMessage')?.value||'你好，请用一句话回复：测试成功',test_mode:$('testMode')?.value||'basic'})});
+      const r=await api('/test',{method:'POST',body:JSON.stringify({providerIndex,model:m,message:$('testMessage')?.value||'你好，请用一句话回复：测试成功',test_mode:'basic'})});
       const one=(r.results||[])[0];
       if(one){results.push(one); one.ok?ok++:bad++; appendTestLog(summarizeResult(one),resultLogType(one));}
       else{bad++; appendTestLog(p.id+'号 / '+m+'：没有返回结果','bad')}
@@ -937,7 +937,7 @@ async function testOneModel(providerIndex, model){
   updateTestOverview({done:0,total:1,label:'测试中 0 / 1'});
   if(box) box.innerHTML='<div class="muted">正在测试 '+esc(model)+' ...</div>';
   try{
-    const r=await api('/test',{method:'POST',body:JSON.stringify({providerIndex,model,message:$('testMessage').value||'你好，请用一句话回复：测试成功',test_mode:$('testMode')?.value||'basic'})});
+    const r=await api('/test',{method:'POST',body:JSON.stringify({providerIndex,model,message:$('testMessage').value||'你好，请用一句话回复：测试成功',test_mode:'basic'})});
     const html=(r.results||[]).map(oneResultHtml).join('') || '<div class="err">没有返回结果</div>';
     if(box) box.innerHTML='<div class="results">'+html+'</div>';
     const agentResults=r.results||[];const agentOk=agentResults.filter(one=>one.ok).length;updateTestOverview({done:1,total:1,ok:agentOk,bad:agentOk?0:1,label:'已完成'});

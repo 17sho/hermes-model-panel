@@ -79,6 +79,37 @@ test("批量测试可以暂停并继续", async ({ page }) => {
   await expect(runButton).toHaveText("开始测试");
 });
 
+test("模型卡片测试不继承顶部生图测试方式", async ({ page }) => {
+  await page.locator('[data-target="testSection"]').click();
+  await page.locator("#testMode").selectOption("image");
+  let requestBody;
+  await page.route("**/api/test", async (route) => {
+    requestBody = route.request().postDataJSON();
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        results: [
+          {
+            providerIndex: 1,
+            provider_name: "oai",
+            base_url: "https://api.example/v1",
+            model: "gpt-5.6-terra",
+            api_mode: "chat_completions",
+            test_mode: "basic",
+            ok: true,
+            http_status: 200,
+            latency_ms: 10,
+            text: "测试成功",
+          },
+        ],
+      }),
+    });
+  });
+  await page.locator('[data-target="providersSection"]').click();
+  await page.locator('[data-action="test-model"]:visible').first().click();
+  await expect.poll(() => requestBody?.test_mode).toBe("basic");
+});
+
 test("测试方式可选择生图测试并返回图片", async ({ page }) => {
   await page.locator('[data-target="testSection"]').click();
   await page.locator("#testTarget").selectOption({ index: 0 });
