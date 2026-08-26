@@ -882,7 +882,7 @@ async function testAgentCurrent(agent){
   }
 }
 let BATCH_TEST_ACTIVE=false;
-function setBatchTestLock(locked){BATCH_TEST_ACTIVE=locked;document.querySelectorAll('#testSection button,.provider button[data-action^="test-"]').forEach(b=>{b.disabled=locked;b.dataset.batchLocked=locked?'1':''})}
+function setBatchTestLock(locked){BATCH_TEST_ACTIVE=locked;document.querySelectorAll('#testSection button:not(#testLogToggleBtn),.provider button[data-action^="test-"]').forEach(b=>{b.disabled=locked;b.dataset.batchLocked=locked?'1':''})}
 async function testProviderAllModels(providerIndex, fromTop=false){
   if(BATCH_TEST_ACTIVE){toast('批量测试正在进行');return}
   const p=(store.state.providers||[]).find(x=>Number(x.id)===Number(providerIndex));

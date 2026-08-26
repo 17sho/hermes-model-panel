@@ -27,6 +27,26 @@ test("中转站测试显示汇总和批量进度", async ({ page }) => {
   await expect(page.locator("#testProgressBar")).toHaveCSS("width", /.+/);
 });
 
+test("批量测试进行中仍可查看检测日志", async ({ page }) => {
+  let releaseFirst;
+  await page.route("**/api/test", async (route) => {
+    await new Promise((resolve) => {
+      releaseFirst = resolve;
+    });
+    await route.continue();
+  });
+  await page.locator('[data-target="testSection"]').click();
+  await page.locator("#testTarget").selectOption("provider-all:1");
+  await page.locator("#runTestBtn").click();
+  const logButton = page.locator("#testLogToggleBtn");
+  await expect(page.locator("#runTestBtn")).toBeDisabled();
+  await expect(logButton).toBeEnabled();
+  await logButton.click();
+  await expect(page.locator("#testLog")).toBeVisible();
+  await expect(logButton).toHaveText("隐藏检测日志");
+  releaseFirst();
+});
+
 test("可删除名称含斜杠的 Hugging Face 模型", async ({ page }) => {
   await page.locator('[data-target="providersSection"]').click();
   const model = page.locator(".modelItem", {
