@@ -845,7 +845,7 @@ async function runTest(sourceButton){
   const expectedTotal=target==='all'?(store.state.providers||[]).length:1;
   $('testResults').innerHTML='<div class="muted">测试中，请稍等...</div>';
   updateTestOverview({done:0,total:expectedTotal,label:`测试中 0 / ${expectedTotal}`});
-  appendTestLog('开始检测：'+label+' · '+(body.test_mode==='hermes_stream'?'Hermes 流式工具调用':'普通回复'),'run');
+  appendTestLog('开始检测：'+label+' · '+(body.test_mode==='hermes_stream'?'Hermes 流式工具调用':body.test_mode==='image'?'生图测试（返回图片）':'普通回复'),'run');
   try{
     const r=await api('/test',{method:'POST',body:JSON.stringify(body),sourceButton});
     const results=r.results||[];
@@ -955,7 +955,8 @@ function oneResultHtml(r){
   const good=r.ok;
   const stream=r.test_mode==='hermes_stream';
   const streamDetail=stream?'<div class="pmeta">'+esc(r.content_type||'无 Content-Type')+' · SSE 事件 '+esc(r.stream_events||0)+' · '+(r.stream_done?'正常结束':'结束标记缺失')+' · 工具调用 '+esc((r.tool_calls||[]).length)+' · '+(r.tool_ok?'参数校验通过':'参数校验失败')+'</div>':'';
-  const detail=good?('<div class="reply">'+esc(stream?'已收到有效的 hermes_test_tool 流式工具调用':r.text)+'</div>'):('<div class="err">'+esc(r.error|| (r.empty?'HTTP 成功但返回空内容':'测试失败'))+'</div>');
+  const image=r.image_url?'<div class="imageTestPreview"><img src="'+escAttr(r.image_url)+'" alt="生图测试返回图片" loading="lazy"><a href="'+escAttr(r.image_url)+'" target="_blank" rel="noopener noreferrer" download>查看原图 / 下载</a></div>':'';
+  const detail=good?('<div class="reply">'+esc(stream?'已收到有效的 hermes_test_tool 流式工具调用':r.text)+'</div>'+image):('<div class="err">'+esc(r.error|| (r.empty?'HTTP 成功但返回空内容':'测试失败'))+'</div>');
   return '<div class="result '+(good?'ok':'bad')+'"><div class="rhead"><div><b>'+esc(r.providerIndex)+'号：'+esc(r.provider_name)+'</b><div class="pmeta">'+esc(r.model)+' · '+esc(r.base_url)+' · '+esc(r.api_mode)+'</div>'+streamDetail+'</div><span class="pill '+(good?'ok':'bad')+'">'+(good?(stream?'Hermes兼容':'可用'):'不可用/空回复')+' · HTTP '+esc(r.http_status)+' · '+esc(r.latency_ms)+'ms</span></div>'+detail+'</div>';
 }
 function renderTestResults(rs){

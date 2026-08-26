@@ -1669,7 +1669,7 @@ router.post('/mimo/tts', async (ctx) => {
 router.post('/test', async (ctx) => {
   try {
     const body = ctx.request.body || {};
-    const testMode = body.test_mode === 'hermes_stream' ? 'hermes_stream' : 'basic';
+    const testMode = body.test_mode === 'hermes_stream' ? 'hermes_stream' : body.test_mode === 'image' ? 'image' : 'basic';
     const message = String(body.message || '你好，请用一句话回复：测试成功').trim().slice(0, 2000) || '你好，请用一句话回复：测试成功';
     const providerIndexRaw = String(body.providerIndex || 'current');
     const providerIndex = providerIndexRaw === 'current' ? 'current' : Number(providerIndexRaw || 0);
@@ -1718,8 +1718,8 @@ router.post('/test', async (ctx) => {
     const results = await mapConcurrent(targets, 4, async (t) => {
       if (testMode === 'hermes_stream' && t.provider.api_mode === 'anthropic_messages') return { providerIndex: t.providerIndex, provider_name: t.provider_name, base_url: t.provider.base_url, ok: false, http_status: 0, latency_ms: 0, model: t.model, api_mode: t.provider.api_mode, test_mode: testMode, text: '', empty: false, error: 'Claude Messages格式暂未支持流式工具诊断' };
       let result;
-      if(isImageModelName(t.model)){
-        result=await testImageModelDirect({base_url:t.provider.base_url,api_key:t.provider.api_key,allow_private_network:t.provider.allow_private_network===true},t.model);
+      if(testMode==='image'||isImageModelName(t.model)){
+        result=await testImageModelDirect({base_url:t.provider.base_url,api_key:t.provider.api_key,allow_private_network:t.provider.allow_private_network===true},t.model,true);
         result={...result,model:t.model,api_mode:'images_generations',text:result.ok?'图片生成成功':'',empty:false};
       }else{
         result=await testProvider(t.provider, t.model, message, testMode);
@@ -1820,7 +1820,7 @@ router.post('/image-gen/models', async (ctx) => {
   }
 });
 
-async function testImageModelDirect(relay, model, timeoutMs = 90000) {
+async function testImageModelDirect(relay, model, includeImage = false, timeoutMs = 90000) {
   const started = Date.now();
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), timeoutMs);
@@ -1834,9 +1834,10 @@ async function testImageModelDirect(relay, model, timeoutMs = 90000) {
     let data = null;
     try { data = JSON.parse(raw); } catch {}
     const image = data?.data?.[0];
-    const hasImage = Boolean(image?.url || image?.b64_json || image?.revised_prompt);
+    const hasImage = Boolean(image?.url || image?.b64_json);
     const error = data?.error?.message || data?.error || (!res.ok ? raw.slice(0, 1000) : !hasImage ? '接口未返回图片数据' : '');
-    return { ok: Boolean(res.ok && hasImage), http_status: res.status, latency_ms: Date.now() - started, error: typeof error === 'string' ? error.slice(0, 1000) : JSON.stringify(error || '').slice(0, 1000) };
+    const imageUrl = includeImage ? (image?.url || (image?.b64_json ? `data:image/png;base64,${image.b64_json}` : '')) : '';
+    return { ok: Boolean(res.ok && hasImage), http_status: res.status, latency_ms: Date.now() - started, image_url: imageUrl, revised_prompt: includeImage ? String(image?.revised_prompt || '').slice(0, 2000) : '', error: typeof error === 'string' ? error.slice(0, 1000) : JSON.stringify(error || '').slice(0, 1000) };
   } catch (e) {
     return { ok: false, http_status: 0, latency_ms: Date.now() - started, error: e.name === 'AbortError' ? '请求超时' : e.message };
   } finally {
@@ -1853,7 +1854,7 @@ router.post('/image-gen/test', async (ctx) => {
     const { cfg } = await loadConfigDoc(agent.config);
     const relay = imageRelayForCfg(cfg);
     if (!relay.api_key) throw new Error('当前中转没有 API Key，无法测试');
-    const result = await testImageModelDirect(relay, model);
+    const result = await testImageModelDirect(relay, model, true);
     if (!result.ok) ctx.status = result.http_status >= 400 ? result.http_status : 502;
     ctx.body = { ...result, model, agent: agent.id, relay: { name: relay.name, base_url: relay.base_url } };
   } catch (e) {

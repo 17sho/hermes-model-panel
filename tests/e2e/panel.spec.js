@@ -79,6 +79,45 @@ test("批量测试可以暂停并继续", async ({ page }) => {
   await expect(runButton).toHaveText("开始测试");
 });
 
+test("测试方式可选择生图测试并返回图片", async ({ page }) => {
+  await page.locator('[data-target="testSection"]').click();
+  await page.locator("#testTarget").selectOption({ index: 0 });
+  await page.locator("#testMode").selectOption("image");
+  let requestBody;
+  await page.route("**/api/test", async (route) => {
+    requestBody = route.request().postDataJSON();
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        results: [
+          {
+            providerIndex: 1,
+            provider_name: "oai",
+            base_url: "https://api.example/v1",
+            model: "gpt-image-1.5",
+            api_mode: "images_generations",
+            test_mode: "image",
+            ok: true,
+            http_status: 200,
+            latency_ms: 321,
+            text: "图片生成成功",
+            image_url: "data:image/png;base64,iVBORw0KGgo=",
+          },
+        ],
+      }),
+    });
+  });
+  await page.locator("#runTestBtn").click();
+  await expect.poll(() => requestBody?.test_mode).toBe("image");
+  await expect(page.locator("#testResults .reply")).toHaveText("图片生成成功");
+  await expect(
+    page.locator("#testResults .imageTestPreview img"),
+  ).toHaveAttribute("src", /^data:image\/png;base64,/);
+  await expect(page.locator("#testResults .imageTestPreview a")).toContainText(
+    "查看原图 / 下载",
+  );
+});
+
 test("生图页面提供图片生成接口专项测试", async ({ page }) => {
   await page
     .locator('[data-target="imageGenSection"]')
