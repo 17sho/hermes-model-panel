@@ -43,8 +43,9 @@ test("完整编辑中转站且 API Key 默认隐藏、可切换显示", async ({
   const closeBox = await close.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390);
-  expect(box.y).toBeGreaterThanOrEqual(0);
-  expect(box.y + box.height).toBeLessThanOrEqual(844);
+  expect(box.y).toBeGreaterThanOrEqual(70);
+  expect(box.y + box.height).toBeLessThanOrEqual(774);
+  expect(box.height).toBeLessThanOrEqual(844 * 0.79);
   expect(closeBox.width).toBeLessThan(100);
   expect(closeBox.height).toBeLessThanOrEqual(44);
   await models.scrollIntoViewIfNeeded();
