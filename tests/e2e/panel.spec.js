@@ -47,6 +47,35 @@ test("批量测试进行中仍可查看检测日志", async ({ page }) => {
   releaseFirst();
 });
 
+test("手机端测试结果卡片不会被长元信息撑出视口", async ({ page }) => {
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page
+      .locator('[data-target="testSection"]')
+      .evaluate((button) => button.click());
+    await page.locator("#testResults").evaluate((node) => {
+      node.innerHTML = `<div class="result ok"><div class="rhead"><div><b>2号：11</b><div class="pmeta">claude-fable-5 · https://hello.iterm.today/v1/this/is/a/very/long/unbroken/provider/path · chat_completions</div></div><span class="pill ok">可用 · HTTP 200 · 3250ms</span></div><div class="reply">你好，测试成功！</div></div>`;
+    });
+    const result = page.locator("#testResults .result");
+    const section = page.locator("#testSection");
+    const [resultBox, sectionBox] = await Promise.all([
+      result.boundingBox(),
+      section.boundingBox(),
+    ]);
+    expect(resultBox.x).toBeGreaterThanOrEqual(sectionBox.x);
+    expect(resultBox.x + resultBox.width).toBeLessThanOrEqual(
+      sectionBox.x + sectionBox.width + 0.5,
+    );
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    await expect(page.locator("#testResults .pmeta")).toHaveCSS(
+      "overflow-wrap",
+      "anywhere",
+    );
+  }
+});
+
 test("可删除名称含斜杠的 Hugging Face 模型", async ({ page }) => {
   await page.locator('[data-target="providersSection"]').click();
   const model = page.locator(".modelItem", {
