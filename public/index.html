@@ -22,7 +22,7 @@
           : "#f4f6f8";
       } catch {}
     </script>
-    <link rel="stylesheet" href="css/app.css?v=v1.3.45" />
+    <link rel="stylesheet" href="css/app.css?v=v1.3.46" />
   </head>
   <body>
     <section id="login" class="login hidden" aria-labelledby="loginTitle">
@@ -30,7 +30,7 @@
         <header class="loginHead">
           <div class="loginMark" aria-hidden="true">◆</div>
           <div class="loginBrand">
-            <span>HERMES PANEL · v1.3.45</span>
+            <span>HERMES PANEL · v1.3.46</span>
             <h1 id="loginTitle">登录模型台</h1>
           </div>
         </header>
@@ -85,7 +85,7 @@
             >
               <span class="versionBadgeCopy">
                 <small>控制台版本</small>
-                <strong id="sidePanelVersion">v1.3.45</strong>
+                <strong id="sidePanelVersion">v1.3.46</strong>
                 <em id="versionBadgeState">检查中</em>
               </span>
               <span class="versionChevron" aria-hidden="true">⌄</span>
@@ -99,7 +99,7 @@
               <div class="versionCurrentRow">
                 <span>
                   <small>当前运行</small>
-                  <b id="versionPopoverNumber">v1.3.45</b>
+                  <b id="versionPopoverNumber">v1.3.46</b>
                   <code id="versionCurrentSha">--------</code>
                 </span>
                 <span id="versionStatusMark" class="versionStateChip"
@@ -921,9 +921,24 @@
                   只批准你确认身份的用户。
                 </p>
               </section>
-              <section class="settingsGroup settingsDanger">
+              <section class="settingsGroup hermesMaintenanceGroup">
                 <div class="settingsGroupHead">
                   <span class="settingsIcon">05</span>
+                  <div><h3>Hermes 维护中心</h3><p class="muted">版本识别、更新检查、备份与健康检查</p></div>
+                </div>
+                <div id="hermesMaintenanceSummary" class="maintenanceSummary"><span class="muted">正在识别 Hermes…</span></div>
+                <div class="actions maintenanceActions">
+                  <button id="checkHermesUpdateBtn" data-static-click="79">检查更新</button>
+                  <button id="backupHermesBtn" data-static-click="80">备份配置</button>
+                  <button id="healthHermesBtn" data-static-click="81">健康检查</button>
+                  <button id="updateHermesBtn" class="primary hidden" data-static-click="82">安全升级</button>
+                </div>
+                <p id="hermesMaintenanceHint" class="settingsNote">只读识别不会修改 Hermes。</p>
+                <pre id="hermesMaintenanceLogs" class="testLogBody maintenanceLogs hidden"></pre>
+              </section>
+              <section class="settingsGroup settingsDanger">
+                <div class="settingsGroupHead">
+                  <span class="settingsIcon">06</span>
                   <div>
                     <h3>服务操作</h3>
                     <p class="muted">配置刷新、安装与重启</p>
@@ -1172,6 +1187,6 @@
       </section>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="js/app.js?v=v1.3.45"></script>
+    <script type="module" src="js/app.js?v=v1.3.46"></script>
   </body>
 </html>

@@ -17,6 +17,7 @@ import { createRequireAuth } from './src/middleware/auth.js';
 import { securityHeadersAndOrigin } from './src/middleware/csrf.js';
 import { mapConcurrent, readResponseText } from './src/lib/http-safety.js';
 import { safeOutboundFetch, Semaphore } from './src/lib/outbound-http.js';
+import { parseHermesUpdateCheck, parseHermesVersionOutput, readMaintenanceStatus, resolveHermesBinary } from './src/lib/hermes-maintenance.js';
 const PORT = Number(process.env.PORT || 3010);
 const HERMES_CONFIG = process.env.HERMES_CONFIG || '/root/.hermes/config.yaml';
 const HERMES_HOME = process.env.HERMES_HOME || path.dirname(HERMES_CONFIG);
@@ -26,6 +27,9 @@ const PANEL_UPDATE_BRANCH = process.env.PANEL_UPDATE_BRANCH || 'main';
 const PANEL_UPDATE_SCRIPT = process.env.PANEL_UPDATE_SCRIPT || path.join(process.cwd(), 'scripts', 'update-panel.sh');
 const PANEL_UPDATE_STATE = process.env.PANEL_UPDATE_STATE || '/var/lib/hermes-model-panel/update-status.json';
 const PANEL_VERSION_FILE = process.env.PANEL_VERSION_FILE || path.join(process.cwd(), '.panel-version');
+const HERMES_BIN = resolveHermesBinary(process.env.HERMES_BIN || 'hermes');
+const HERMES_MAINTENANCE_SCRIPT = process.env.HERMES_MAINTENANCE_SCRIPT || path.join(process.cwd(), 'scripts', 'hermes-maintenance.sh');
+const HERMES_MAINTENANCE_STATE = process.env.HERMES_MAINTENANCE_STATE || '/var/lib/hermes-model-panel/hermes-maintenance-status.json';
 const OUTBOUND_CONCURRENCY = Number.parseInt(process.env.OUTBOUND_CONCURRENCY || '8', 10);
 const outboundSemaphore = new Semaphore(Number.isInteger(OUTBOUND_CONCURRENCY) && OUTBOUND_CONCURRENCY > 0 ? OUTBOUND_CONCURRENCY : 8);
 
@@ -1951,7 +1955,6 @@ const CHAT_PLATFORMS = [
 ];
 const CHAT_PLATFORM_IDS = new Set(CHAT_PLATFORMS.map((p) => p.id));
 const CHAT_PLATFORM_KEYS = new Set(CHAT_PLATFORMS.flatMap((p) => p.fields.map((f) => f.key)));
-const HERMES_BIN = process.env.HERMES_BIN || 'hermes';
 
 function agentEnvPath(agent) {
   if (!agent) throw new Error('agent 不存在');
@@ -2747,6 +2750,59 @@ router.post('/gateway-control', async (ctx) => {
   } catch (e) {
     ctx.status = 400;
     ctx.body = { ok: false, error: e.message || '操作失败' };
+  }
+});
+
+async function hermesVersionInfo() {
+  const { stdout = '', stderr = '' } = await execFileAsync(HERMES_BIN, ['--version'], { timeout: 15000, env: process.env, maxBuffer: 200000 });
+  const parsed = parseHermesVersionOutput(`${stdout}\n${stderr}`);
+  if (!parsed.version) throw new Error('无法识别当前 Hermes 版本');
+  return { ...parsed, binary: HERMES_BIN, agents: AGENTS().map((agent) => ({ id: agent.id, profile: agent.profile, service: agent.service })) };
+}
+
+router.get('/hermes-maintenance', async (ctx) => {
+  try {
+    const [hermes, status] = await Promise.all([hermesVersionInfo(), readMaintenanceStatus(HERMES_MAINTENANCE_STATE)]);
+    ctx.set('Cache-Control', 'no-store');
+    ctx.body = { ok: true, hermes, status };
+  } catch (e) {
+    ctx.status = 200;
+    ctx.body = { ok: false, error: publicError(e, 'Hermes版本识别失败') };
+  }
+});
+
+router.post('/hermes-maintenance/check', async (ctx) => {
+  try {
+    const hermes = await hermesVersionInfo();
+    const { stdout = '', stderr = '' } = await execFileAsync(HERMES_BIN, ['update', '--check'], { timeout: 120000, env: process.env, maxBuffer: 500000 });
+    ctx.body = { ok: true, hermes, update: parseHermesUpdateCheck(`${stdout}\n${stderr}`, hermes.version) };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: publicError(e, '检查Hermes更新失败') };
+  }
+});
+
+router.post('/hermes-maintenance/run', async (ctx) => {
+  try {
+    const action = String(ctx.request.body?.action || '').trim();
+    if (!['backup', 'health', 'update'].includes(action)) throw new Error('不支持的维护操作');
+    const current = await readMaintenanceStatus(HERMES_MAINTENANCE_STATE);
+    if (current.state === 'running') throw new Error('已有Hermes维护任务正在执行');
+    if (action === 'update' && ctx.request.body?.confirmed !== true) throw new Error('升级前必须明确确认');
+    await fs.access(HERMES_MAINTENANCE_SCRIPT, fssync.constants.X_OK);
+    const unit = `hermes-agent-maintenance-${Date.now()}`;
+    await execFileAsync('systemd-run', [
+      '--unit', unit, '--collect', '--property=Type=exec',
+      '--setenv', `HERMES_BIN=${HERMES_BIN}`,
+      '--setenv', `HERMES_HOME=${HERMES_HOME}`,
+      '--setenv', `HERMES_MAINTENANCE_STATE=${HERMES_MAINTENANCE_STATE}`,
+      HERMES_MAINTENANCE_SCRIPT, action,
+    ], { timeout: 10000 });
+    ctx.status = 202;
+    ctx.body = { ok: true, state: 'started', action };
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { ok: false, error: publicError(e, '启动Hermes维护任务失败') };
   }
 });
 

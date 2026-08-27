@@ -95,3 +95,10 @@ html{background:var(--bg)}html,body{transition:background-color var(--motion-bas
 @keyframes auth-in{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}@keyframes view-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes dialog-in{from{opacity:0;transform:translate(-50%,calc(-50% + 10px)) scale(.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes dialog-out{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,calc(-50% + 5px)) scale(.98)}}@keyframes backdrop-in{from{opacity:0}to{opacity:1}}@keyframes backdrop-out{from{opacity:1}to{opacity:0}}@keyframes toast-in{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translateX(-50%)}}@keyframes toast-out{from{opacity:1;transform:translateX(-50%)}to{opacity:0;transform:translate(-50%,6px)}}
 @media(max-width:900px){.workSessActs.is-current{grid-template-columns:minmax(0,1fr) auto}.workSessItem{padding:var(--sp-3)}.workSessTop{gap:var(--sp-2)}.workSessMeta{line-height:1.45}.workSessActs{margin-top:var(--sp-2);gap:var(--sp-2)}.workSessActs select,.workSessActs button{min-height:var(--control);line-height:var(--lh-base)}}
 @media(prefers-reduced-motion:reduce){html,body{transition:none}.loginCard,.panelSection.activeSection,.modalBackdrop,.modalPanel,.toast{animation:none!important}}
+
+/* Hermes maintenance */
+.maintenanceSummary{display:grid;gap:12px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface-soft)}
+.maintenanceVersion{display:flex;align-items:baseline;gap:10px}.maintenanceVersion b{font-size:28px}.maintenanceVersion span{color:var(--muted)}
+.maintenanceFacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.maintenanceFacts span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.maintenanceLogs{display:block;max-height:300px;margin-top:12px;white-space:pre-wrap;overflow:auto}.maintenanceLogs.hidden{display:none}
+@media(max-width:560px){.maintenanceFacts{grid-template-columns:1fr}.maintenanceActions button{width:100%}}

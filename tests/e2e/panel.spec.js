@@ -320,6 +320,17 @@ test("14 页导航保留 SVG，移动菜单可重复开关", async ({ page }) =>
   }
 });
 
+test("Hermes维护中心识别版本且手机端按钮不溢出", async ({ page }) => {
+  await page.goto("/");
+  await page.locator('[data-target="settingsSection"]').click();
+  await expect(page.locator("#hermesMaintenanceSummary")).toContainText("v0.18.2");
+  await expect(page.locator("#hermesMaintenanceSummary")).toContainText("git");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator("#hermesMaintenanceSummary")).toContainText("Python：3.11.15");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  expect(overflow).toBe(false);
+});
+
 test("版本检查遇到 Cloudflare HTML 502 时显示友好提示", async ({ page }) => {
   await page.route("**/api/panel-update", (route) =>
     route.fulfill({

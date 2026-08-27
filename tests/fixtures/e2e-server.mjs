@@ -35,6 +35,7 @@ const server = http.createServer(async (request, response) => {
             : url.pathname === '/api/toolsets' ? { ok: true, catalog: [], agents: [{ agent: 'default', name: 'Agent1', enabled: [] }] }
               : url.pathname === '/api/skills' ? { ok: true, agents: [{ agent: 'default', name: 'Agent1', catalog: [], disabled: [] }] }
                 : url.pathname === '/api/chat-platforms' ? { ok: true, agents: [] }
+                : url.pathname === '/api/hermes-maintenance' ? { ok: true, hermes: { version: '0.18.2', build: '2026.7.7.2', install_method: 'git', python: '3.11.15', binary: '/opt/hermes/bin/hermes', agents: [{ id: 'default', profile: 'agent1' }] }, status: { state: 'idle', message: '尚未执行维护任务', logs: [] } }
                   : url.pathname === '/api/health' ? { ok: true }
                     : { ok: true, statuses: [], events: [], total: 0 };
     response.end(JSON.stringify(payload));

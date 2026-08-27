@@ -89,6 +89,10 @@ const STATIC_EVENT_HANDLERS = {
   76: function(event){closeProviderEdit()},
   77: function(event){saveProviderEdit(this)},
   78: function(event){updateUsageCalculator()},
+  79: function(event){checkHermesUpdate(this)},
+  80: function(event){runHermesMaintenance('backup',this)},
+  81: function(event){runHermesMaintenance('health',this)},
+  82: function(event){runHermesMaintenance('update',this)},
 };
 function installStaticEventHandlers(){
   for(const type of ['click','change','input','keydown','submit']){
@@ -159,8 +163,8 @@ else if(MOBILE_MENU_MQ.addListener)MOBILE_MENU_MQ.addListener(syncMenuToViewport
 window.addEventListener('resize',syncMenuToViewport);
 function markSideActive(target){document.querySelectorAll('.sideNav button').forEach(b=>b.classList.toggle('active',b.dataset.target===target))}
 function showPanel(id){const current=document.querySelector('.panelSection.activeSection');markSideActive(id);if(current?.id===id)return;document.querySelectorAll('.panelSection').forEach(el=>{const active=el.id===id;el.classList.toggle('activeSection',active);if(active){el.getAnimations?.().forEach(a=>a.cancel());void el.offsetWidth}});markSideActive(id);try{history.replaceState(null,'','#'+id)}catch{} const scroller=MOBILE_MENU_MQ.matches?window:document.querySelector('.workspace');scroller?.scrollTo?.({top:0,behavior:window.matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'})}
-function goSection(id,btn){const el=$(id);if(!el)return;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='sessionResumeSection')loadSessionResume();if(id==='agentToolsSection')loadAgentTools();if(id==='agentSkillsSection')loadAgentSkills();if(id==='readableLogsSection')loadReadableLogs();if(id==='approvalSettingsSection')loadApprovalSettings();if(id==='settingsSection')loadAuthSettings();if(window.matchMedia('(max-width:900px)').matches)toggleSideMenu(false)}
-function initPanelPage(){const wanted=(location.hash||'').replace('#','');const first=document.querySelector('.panelSection')?.id||'currentSection';const id=$(wanted)?wanted:first;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='sessionResumeSection')loadSessionResume();if(id==='agentToolsSection')loadAgentTools();if(id==='agentSkillsSection')loadAgentSkills();if(id==='readableLogsSection')loadReadableLogs();if(id==='approvalSettingsSection')loadApprovalSettings();if(id==='settingsSection')loadAuthSettings()}
+function goSection(id,btn){const el=$(id);if(!el)return;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='sessionResumeSection')loadSessionResume();if(id==='agentToolsSection')loadAgentTools();if(id==='agentSkillsSection')loadAgentSkills();if(id==='readableLogsSection')loadReadableLogs();if(id==='approvalSettingsSection')loadApprovalSettings();if(id==='settingsSection'){loadAuthSettings();loadHermesMaintenance()};if(window.matchMedia('(max-width:900px)').matches)toggleSideMenu(false)}
+function initPanelPage(){const wanted=(location.hash||'').replace('#','');const first=document.querySelector('.panelSection')?.id||'currentSection';const id=$(wanted)?wanted:first;showPanel(id);if(id==='chatToolsSection')loadChatPlatforms();if(id==='workStatusSection')loadWorkStatus();if(id==='sessionResumeSection')loadSessionResume();if(id==='agentToolsSection')loadAgentTools();if(id==='agentSkillsSection')loadAgentSkills();if(id==='readableLogsSection')loadReadableLogs();if(id==='approvalSettingsSection')loadApprovalSettings();if(id==='settingsSection'){loadAuthSettings();loadHermesMaintenance()}}
 
 const MOTION_OBSERVER=new window.MutationObserver(records=>{const roots=new Set();for(const record of records){if(record.addedNodes.length&&record.target?.nodeType===1)roots.add(record.target)}for(const root of roots)animateRenderedItems(root)});
 requestAnimationFrame(()=>{const app=$('app');if(app)MOTION_OBSERVER.observe(app,{childList:true,subtree:true})});
@@ -254,6 +258,13 @@ function applyAuthSettings(s){
 async function loadAuthSettings(){
   try{applyAuthSettings(await api('/auth-settings'))}catch(e){const hint=$('authHint'); if(hint) hint.textContent=e.message}
 }
+let HERMES_MAINTENANCE=null,HERMES_MAINTENANCE_POLL=null;
+function renderHermesMaintenance(r){HERMES_MAINTENANCE=r;const h=r?.hermes||{},u=r?.update||{},s=r?.status||{};const summary=$('hermesMaintenanceSummary');if(summary)summary.innerHTML=`<div class="maintenanceVersion"><b>v${esc(h.version||'-')}</b><span>${esc(h.build||'')}</span></div><div class="maintenanceFacts"><span>安装方式：${esc(h.install_method||'未知')}</span><span>Python：${esc(h.python||'-')}</span><span>影响：${Number(h.agents?.length||0)} 个 Profile</span><span title="${escAttr(h.binary||'')}">路径：${esc(h.binary||'-')}</span></div>`;const hint=$('hermesMaintenanceHint');if(hint)hint.textContent=u.checked?(u.update_available?`发现可用更新${u.latest_version?'：v'+u.latest_version:''}`:'当前已是最新版本'):(s.message||'只读识别完成，可检查更新。');const update=$('updateHermesBtn');update?.classList.toggle('hidden',!u.update_available);const logs=$('hermesMaintenanceLogs');if(logs){const lines=s.logs||[];logs.textContent=lines.join('\n');logs.classList.toggle('hidden',!lines.length)}if(s.state==='running')startHermesMaintenancePoll();else stopHermesMaintenancePoll()}
+async function loadHermesMaintenance(){try{renderHermesMaintenance(await api('/hermes-maintenance'))}catch(e){const hint=$('hermesMaintenanceHint');if(hint)hint.textContent=e.message}}
+async function checkHermesUpdate(btn){try{const r=await api('/hermes-maintenance/check',{method:'POST',body:'{}',sourceButton:btn,timeout:130000});renderHermesMaintenance({...r,status:HERMES_MAINTENANCE?.status||{}});toast(r.update?.update_available?'发现Hermes更新':'Hermes已是最新版本')}catch(e){toast(e.message)}}
+function stopHermesMaintenancePoll(){if(HERMES_MAINTENANCE_POLL){clearTimeout(HERMES_MAINTENANCE_POLL);HERMES_MAINTENANCE_POLL=null}}
+function startHermesMaintenancePoll(){if(HERMES_MAINTENANCE_POLL)return;HERMES_MAINTENANCE_POLL=setTimeout(async()=>{HERMES_MAINTENANCE_POLL=null;await loadHermesMaintenance()},1800)}
+async function runHermesMaintenance(action,btn){const label={backup:'创建Hermes配置备份',health:'运行Hermes健康检查',update:'升级Hermes'}[action];if(action==='update'&&!await askConfirm(`确定安全升级 Hermes？\\n系统将先备份，再执行官方升级、配置迁移与健康检查。升级期间 Gateway 可能短暂中断。`,{title:'确认升级 Hermes',confirmText:'备份并升级',tone:'warning'}))return;try{await api('/hermes-maintenance/run',{method:'POST',body:JSON.stringify({action,confirmed:action==='update'}),sourceButton:btn});$('hermesMaintenanceHint').textContent=`${label}已启动…`;startHermesMaintenancePoll();toast(`${label}已启动`)}catch(e){toast(e.message)}}
 async function saveAuthSettings(sourceButton){
   const btn=sourceButton||$('saveAuthBtn');
   if(btn){if(btn.dataset.busy)return; btn.dataset.busy='1'; btn.disabled=true}

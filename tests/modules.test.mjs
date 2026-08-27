@@ -14,6 +14,12 @@ import {
 } from "../src/lib/http-safety.js";
 import { createRequireAuth } from "../src/middleware/auth.js";
 import { securityHeadersAndOrigin } from "../src/middleware/csrf.js";
+import {
+  parseHermesUpdateCheck,
+  parseHermesVersionOutput,
+  redactMaintenanceOutput,
+  resolveHermesBinary,
+} from "../src/lib/hermes-maintenance.js";
 
 test("atomic file writes serialize updates and preserve restrictive mode", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "hmp-atomic-"));
@@ -139,6 +145,33 @@ test("private address classification covers IPv4 and IPv6 ranges", () => {
   }
   assert.equal(isPrivateAddress("8.8.8.8"), false);
   assert.equal(isPrivateAddress("2606:4700:4700::1111"), false);
+});
+
+test("Hermes maintenance helpers parse versions and redact secrets", () => {
+  const parsed = parseHermesVersionOutput(
+    "Hermes Agent v0.18.2 (2026.7.7.2)\nInstall directory: /opt/hermes\nInstall method: git\nPython: 3.11.15",
+  );
+  assert.equal(parsed.version, "0.18.2");
+  assert.equal(parsed.install_method, "git");
+  assert.equal(
+    parseHermesUpdateCheck("Already up to date", parsed.version)
+      .update_available,
+    false,
+  );
+  assert.equal(
+    parseHermesUpdateCheck("Update available: v0.19.0", parsed.version)
+      .update_available,
+    true,
+  );
+  assert.doesNotMatch(
+    redactMaintenanceOutput("API_KEY=supersecret Bearer abc.def"),
+    /supersecret|abc\.def/,
+  );
+  assert.equal(
+    resolveHermesBinary("/opt/hermes/venv/bin/hermes"),
+    "/opt/hermes/venv/bin/hermes",
+  );
+  assert.throws(() => resolveHermesBinary("../bad"));
 });
 
 test("concurrency helper preserves order and enforces its limit", async () => {
